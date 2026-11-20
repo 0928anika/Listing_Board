@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --ink:#202938;
+      --muted:#748094;
+      --line:#e1e5ea;
+      --surface:#f5f7fa;
+      --to-do:#5475b8;
+      --ongoing:#5bb5e5;
+      --on-hold:#f17868;
+      --done:#32b858;
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; overflow:hidden; }
+    body { color:var(--ink); background:#fff; font:12px Arial,"Noto Sans KR",sans-serif; }
+    button, input, select { min-width:0; font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:default; opacity:.55; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline:2px solid var(--to-do);
+      outline-offset:2px;
+    }
+    .app { display:flex; flex-direction:column; height:100%; }
+    .top {
+      flex-shrink:0;
+      padding:12px 14px 11px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+    .headline { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .title { font-size:18px; font-weight:800; letter-spacing:-.4px; }
+    .updated { color:var(--muted); font-size:10px; }
+    .actions { display:flex; gap:6px; margin-left:auto; }
+    button {
+      padding:7px 10px;
+      border:1px solid #d9e0e9;
+      border-radius:6px;
+      color:#43536a;
+      background:#fff;
+    }
+    button:hover:not(:disabled) { background:#edf3fc; }
+    .filters {
+      display:grid;
+      grid-template-columns:minmax(170px,1.4fr) minmax(150px,1.15fr) repeat(3,minmax(120px,1fr)) auto auto;
+      gap:7px;
+      align-items:end;
+    }
+    .field { display:grid; gap:4px; min-width:0; }
+    .field label { color:#68768b; font-size:10px; font-weight:700; }
+    .field input, .field select {
+      width:100%;
+      height:32px;
+      padding:0 8px;
+      border:1px solid #dce2eb;
+      border-radius:6px;
+      color:var(--ink);
+      background:#fff;
+    }
+    .filter-button { height:32px; white-space:nowrap; }
+    .result-count { align-self:center; color:#68768b; font-size:10px; white-space:nowrap; }
+    .board-scroll {
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding:12px;
+      background:#f7f8fa;
+      scrollbar-gutter:stable;
+      overscroll-behavior:contain;
+    }
+    .board { display:grid; gap:12px; min-width:1040px; }
+    .lane {
+      display:grid;
+      grid-template-columns:54px repeat(4,minmax(230px,1fr));
+      gap:8px;
+      align-items:stretch;
+    }
+    .lane-label {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:210px;
+      padding:8px 0;
+      border-radius:8px;
+      color:#fff;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.6px;
+      line-height:1.3;
+      text-align:center;
+      writing-mode:vertical-rl;
+      transform:rotate(180deg);
+    }
+    .lane:nth-child(1) .lane-label { background:#27385d; }
+    .lane:nth-child(2) .lane-label { background:#314a70; }
+    .lane:nth-child(3) .lane-label { background:#3e5578; }
+    .status-column {
+      min-height:210px;
+      padding:8px;
+      border-radius:9px;
+      background:#eef1f5;
+    }
+    .status-head {
+      display:flex;
+      align-items:center;
+      min-height:28px;
+      margin:-8px -8px 8px;
+      padding:6px 9px;
+      border-radius:9px 9px 0 0;
+      color:#fff;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.25px;
+    }
+    .status-head .count {
+      margin-left:auto;
+      padding:2px 7px;
+      border-radius:99px;
+      color:#34445a;
+      background:#fff;
+      font-variant-numeric:tabular-nums;
+    }
+    .status-to-do .status-head { background:var(--to-do); }
+    .status-ongoing .status-head { background:var(--ongoing); }
+    .status-on-hold .status-head { background:var(--on-hold); }
+    .status-done .status-head { background:var(--done); }
+    .cards { display:grid; gap:8px; }
+    .card {
+      position:relative;
+      overflow:hidden;
+      padding:10px 10px 11px 12px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:#fff;
+      box-shadow:0 1px 4px rgba(31,48,73,.06);
+    }
+    .card::before {
+      position:absolute;
+      top:0;
+      bottom:0;
+      left:0;
+      width:3px;
+      background:var(--card-color);
+      content:"";
+    }
+    .card-top { display:flex; align-items:center; gap:7px; }
+    .request-id {
+      min-width:0;
+      overflow:hidden;
+      color:#4a5668;
+      font-size:10px;
+      font-weight:800;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .priority {
+      flex-shrink:0;
+      margin-left:auto;
+      padding:3px 6px;
+      border-radius:5px;
+      color:#687386;
+      background:#f0f2f5;
+      font-size:9px;
+      font-weight:800;
+    }
+    .priority.high { color:#a64d45; background:#f9e7e5; }
+    .brand {
+      margin:8px 0 6px;
+      overflow-wrap:anywhere;
+      color:#263142;
+      font-size:13px;
+      font-weight:800;
+    }
+    .meta { display:grid; gap:3px; color:#737f90; font-size:9px; line-height:1.45; }
+    .meta-row { display:flex; gap:6px; min-width:0; }
+    .meta-key { flex-shrink:0; color:#53657c; font-weight:700; }
+    .meta-value { min-width:0; overflow-wrap:anywhere; }
+    .progress-row { margin-top:9px; }
+    .progress-label {
+      display:flex;
+      gap:7px;
+      color:#606b7b;
+      font-size:9px;
+      font-variant-numeric:tabular-nums;
+    }
+    .progress-label b { margin-left:auto; color:#4c5c72; }
+    .track { height:5px; margin-top:5px; overflow:hidden; border-radius:99px; background:#e7eaf0; }
+    .fill { height:100%; border-radius:99px; }
+    .empty { padding:28px 8px; color:#9aa3af; font-size:10px; text-align:center; }
+    .loading {
+      position:fixed;
+      z-index:50;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#526178;
+      background:rgba(248,250,253,.92);
+      font-size:13px;
+    }
+    .loading.hidden { display:none; }
+    .spinner {
+      width:20px;
+      height:20px;
+      margin-right:9px;
+      border:3px solid #dce2eb;
+      border-top-color:var(--to-do);
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .message {
+      position:fixed;
+      z-index:60;
+      right:16px;
+      bottom:16px;
+      max-width:520px;
+      padding:10px 13px;
+      border-radius:7px;
+      color:#fff;
+      background:#9b4040;
+      line-height:1.5;
+      box-shadow:0 8px 25px rgba(31,48,73,.18);
+    }
+    .message.hidden { display:none; }
+    @media(max-width:900px) {
+      .filters { grid-template-columns:repeat(3,minmax(130px,1fr)); }
+      .result-count { justify-self:end; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="headline">
+        <span class="title">Kanban</span>
+        <span class="updated" id="updated">조회 중…</span>
+        <div class="actions">
+          <button type="button" id="refreshButton">새로고침</button>
+          <button type="button" id="closeButton">닫기</button>
+        </div>
+      </div>
+      <div class="filters" id="filters">
+        <div class="field">
+          <label for="requestorSearch">Requestor 이름</label>
+          <input id="requestorSearch" type="search" autocomplete="off" placeholder="이름 부분 검색">
+        </div>
+        <div class="field">
+          <label for="generalSearch">일반 검색</label>
+          <input id="generalSearch" type="search" autocomplete="off" placeholder="Request ID, 브랜드 등">
+        </div>
+        <div class="field">
+          <label for="brandFilter">브랜드</label>
+          <select id="brandFilter"><option value="">모든 브랜드</option></select>
+        </div>
+        <div class="field">
+          <label for="assigneeFilter">담당자</label>
+          <select id="assigneeFilter"><option value="">모든 담당자</option></select>
+        </div>
+        <div class="field">
+          <label for="nodeFilter">Node</label>
+          <select id="nodeFilter"><option value="">모든 Node</option></select>
+        </div>
+        <button type="button" class="filter-button" id="resetButton">필터 초기화</button>
+        <span class="result-count" id="resultCount" aria-live="polite">0 requests</span>
+      </div>
+    </header>
+    <main class="board-scroll">
+      <div class="board" id="board" aria-label="요청 Kanban"></div>
+    </main>
+  </div>
+  <div class="loading" id="loading"><span class="spinner"></span>Kanban을 불러오는 중…</div>
+  <div class="message hidden" id="message" role="alert"></div>
+
+  <script>
+    var DATA = {requests:[], config:{}};
+    var STATUS_COLUMNS = [
+      {value:'TO DO', label:'TO DO', css:'to-do', color:'#5475b8'},
+      {value:'ONGOING', label:'ONGOING', css:'ongoing', color:'#5bb5e5'},
+      {value:'ON HOLD', label:'ON HOLD', css:'on-hold', color:'#f17868'},
+      {value:'DONE', label:'DONE', css:'done', color:'#32b858'}
+    ];
+    var REQUEST_TYPE_LANES = [
+      {value:'3P Listing', label:'3P LISTING'},
+      {value:'2P Lite 전환', label:'2P LITE'},
+      {value:'3P Listing 후 2P Lite 전환', label:'3P + 2P'}
+    ];
+    var filterIds = ['requestorSearch','generalSearch','brandFilter','assigneeFilter','nodeFilter'];
+
+    function byId(id) { return document.getElementById(id); }
+    function text(value) { return String(value == null ? '' : value); }
+    function normalized(value) { return text(value).toLocaleLowerCase('ko-KR').trim(); }
+    function number(value) {
+      var result = Number(value);
+      return Number.isFinite(result) ? Math.max(result, 0) : 0;
+    }
+    function element(tag, className, value) {
+      var node = document.createElement(tag);
+      if (className) node.className = className;
+      if (value !== undefined) node.textContent = text(value);
+      return node;
+    }
+    function unique(values) {
+      var seen = Object.create(null);
+      return values.map(function(value){ return text(value).trim(); }).filter(function(value){
+        if (!value || seen[value]) return false;
+        seen[value] = true;
+        return true;
+      }).sort(function(a,b){ return a.localeCompare(b, 'ko', {numeric:true}); });
+    }
+    function assignees(value) {
+      return text(value).split(',').map(function(name){ return name.trim(); }).filter(Boolean);
+    }
+    function fillSelect(id, values) {
+      var select = byId(id), previous = select.value, first = select.options[0].cloneNode(true);
+      select.textContent = '';
+      select.appendChild(first);
+      unique(values).forEach(function(value){
+        var option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+      if (Array.prototype.some.call(select.options, function(option){ return option.value === previous; })) select.value = previous;
+    }
+    function setupFilters() {
+      var config = DATA.config || {}, requests = (DATA.requests || []).filter(isBoardRequest);
+      fillSelect('brandFilter', (config.brands || []).concat(requests.map(function(r){ return r.brand; })));
+      fillSelect('assigneeFilter', (config.workers || []).concat([].concat.apply([], requests.map(function(r){ return assignees(r.assignee); }))));
+      fillSelect('nodeFilter', (config.nodes || []).concat(requests.map(function(r){ return r.node; })));
+    }
+    function isBoardRequest(request) {
+      return STATUS_COLUMNS.some(function(status){ return status.value === request.status; }) &&
+        REQUEST_TYPE_LANES.some(function(lane){ return lane.value === request.requestType; });
+    }
+    function filteredRequests() {
+      var requestorQuery = normalized(byId('requestorSearch').value);
+      var generalQuery = normalized(byId('generalSearch').value);
+      var brand = byId('brandFilter').value;
+      var worker = byId('assigneeFilter').value;
+      var node = byId('nodeFilter').value;
+      return (DATA.requests || []).filter(function(request){
+        if (!isBoardRequest(request)) return false;
+        if (requestorQuery && normalized(request.requester).indexOf(requestorQuery) < 0) return false;
+        if (generalQuery && normalized([
+          request.requestId, request.brand, request.assignee, request.node, request.requestType, request.priority
+        ].join(' ')).indexOf(generalQuery) < 0) return false;
+        if (brand && text(request.brand) !== brand) return false;
+        if (worker && assignees(request.assignee).indexOf(worker) < 0) return false;
+        if (node && text(request.node) !== node) return false;
+        return true;
+      });
+    }
+    function metaRow(label, value) {
+      var row = element('div','meta-row');
+      row.appendChild(element('span','meta-key',label));
+      row.appendChild(element('span','meta-value',value || '—'));
+      return row;
+    }
+    function progressRow(label, completed, total, color) {
+      completed = number(completed);
+      total = number(total);
+      var percent = total ? Math.max(0, Math.min(100, Math.round(completed / total * 100))) : 0;
+      var remaining = Math.max(total - completed, 0);
+      var row = element('div','progress-row');
+      var summary = element('div','progress-label');
+      summary.appendChild(element('span','',label + '  ' + completed.toLocaleString('ko-KR') + '/' + total.toLocaleString('ko-KR') + ' · 남음 ' + remaining.toLocaleString('ko-KR')));
+      summary.appendChild(element('b','',percent + '%'));
+      var track = element('div','track'), fill = element('div','fill');
+      fill.style.width = percent + '%';
+      fill.style.backgroundColor = color;
+      track.appendChild(fill);
+      row.appendChild(summary);
+      row.appendChild(track);
+      return row;
+    }
+    function createCard(request, status) {
+      var card = element('article','card');
+      card.style.setProperty('--card-color', status.color);
+      var top = element('div','card-top');
+      top.appendChild(element('span','request-id',request.requestId || 'Request ID 없음'));
+      var priority = element('span','priority' + (text(request.priority).toUpperCase() === 'HIGH' ? ' high' : ''),request.priority || 'NORMAL');
+      top.appendChild(priority);
+      card.appendChild(top);
+      card.appendChild(element('div','brand',request.brand || '브랜드 미지정'));
+      var meta = element('div','meta');
+      meta.appendChild(metaRow('REQUESTOR', request.requester));
+      meta.appendChild(metaRow('NODE', request.node));
+      meta.appendChild(metaRow('ASSIGNEE', request.assignee || '미배정'));
+      card.appendChild(meta);
+      if (request.requestType === '3P Listing') {
+        card.appendChild(progressRow('3P LISTING', request.completed3P, request.totalVi, status.color));
+      } else if (request.requestType === '2P Lite 전환') {
+        card.appendChild(progressRow('2P LITE', request.completed2P, request.totalVi, status.color));
+      } else {
+        card.appendChild(progressRow('3P LISTING', request.completed3P, request.totalVi, '#5475b8'));
+        card.appendChild(progressRow('2P LITE', request.completed2P, request.totalVi, '#5a9d91'));
+      }
+      return card;
+    }
+    function createColumn(requests, status) {
+      var column = element('section','status-column status-' + status.css);
+      column.setAttribute('aria-label', status.label);
+      var head = element('div','status-head');
+      head.appendChild(element('span','',status.label));
+      head.appendChild(element('span','count',requests.length));
+      column.appendChild(head);
+      var cards = element('div','cards');
+      if (!requests.length) cards.appendChild(element('div','empty','요청 없음'));
+      requests.forEach(function(request){ cards.appendChild(createCard(request, status)); });
+      column.appendChild(cards);
+      return column;
+    }
+    function render() {
+      var requests = filteredRequests(), board = byId('board');
+      board.textContent = '';
+      REQUEST_TYPE_LANES.forEach(function(laneDefinition){
+        var lane = element('section','lane');
+        lane.setAttribute('aria-label', laneDefinition.label);
+        lane.appendChild(element('div','lane-label',laneDefinition.label));
+        STATUS_COLUMNS.forEach(function(status){
+          var matches = requests.filter(function(request){
+            return request.requestType === laneDefinition.value && request.status === status.value;
+          });
+          lane.appendChild(createColumn(matches, status));
+        });
+        board.appendChild(lane);
+      });
+      byId('resultCount').textContent = requests.length.toLocaleString('ko-KR') + ' requests';
+    }
+    function setLoading(active) {
+      byId('loading').classList.toggle('hidden', !active);
+      byId('refreshButton').disabled = active;
+    }
+    function showMessage(message) {
+      var box = byId('message');
+      box.textContent = text(message);
+      box.classList.remove('hidden');
+    }
+    function hideMessage() { byId('message').classList.add('hidden'); }
+    function load() {
+      setLoading(true);
+      hideMessage();
+      google.script.run
+        .withSuccessHandler(function(data){
+          try {
+            if (!data || !Array.isArray(data.requests)) throw new Error('올바른 Kanban 데이터를 받지 못했습니다.');
+            DATA = data;
+            DATA.config = DATA.config || {};
+            setupFilters();
+            byId('updated').textContent = '갱신 ' + (data.generatedAt || '방금');
+            render();
+          } catch (error) {
+            showMessage(error && error.message ? error.message : error);
+          } finally {
+            setLoading(false);
+          }
+        })
+        .withFailureHandler(function(error){
+          setLoading(false);
+          showMessage('조회 실패: ' + (error && error.message ? error.message : error));
+        })
+        .getKanbanDialogData();
+    }
+    function resetFilters() {
+      filterIds.forEach(function(id){ byId(id).value = ''; });
+      render();
+    }
+    filterIds.forEach(function(id){
+      var eventName = byId(id).tagName === 'SELECT' ? 'change' : 'input';
+      byId(id).addEventListener(eventName, render);
+    });
+    byId('resetButton').addEventListener('click', resetFilters);
+    byId('refreshButton').addEventListener('click', load);
+    byId('closeButton').addEventListener('click', function(){ google.script.host.close(); });
+    document.addEventListener('keydown', function(event){
+      if (event.key === 'Escape') google.script.host.close();
+    });
+    load();
+  </script>
+</body>
+</html>

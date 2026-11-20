@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.clasp.json
+.clasp.*.json
+!.clasp.example.json
+.clasprc*
+*.pem
+*.key
+*.log
+.DS_Store

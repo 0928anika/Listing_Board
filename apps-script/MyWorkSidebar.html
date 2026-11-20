@@ -1,0 +1,220 @@
+<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8"><style>
+:root{--ink:#1f2937;--muted:#718096;--line:#e2e8f0;--blue:#2563eb;--green:#16a34a;--orange:#ea8a24;--red:#dc5b55;--bg:#f6f8fb}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:12px Arial,"Noto Sans KR",sans-serif}.top{position:sticky;top:0;z-index:5;padding:14px;background:#fff;border-bottom:1px solid var(--line)}.headline{display:flex;justify-content:space-between;align-items:center}.title{font-size:18px;font-weight:900}.refresh{border:0;background:#eef3fb;color:#315b8a;border-radius:7px;padding:7px 9px;font-weight:800;cursor:pointer}.updated{margin-top:3px;color:var(--muted);font-size:9px}.worker{margin-top:11px}label{display:block;margin-bottom:4px;color:#64748b;font-size:10px;font-weight:800}select{width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 10px}.active{margin-top:10px;padding:10px;border:1px solid #f0d7a2;border-radius:9px;background:#fff8e7}.active.empty{border-color:var(--line);background:#f8fafc;color:var(--muted)}.active b{display:block;margin-bottom:3px;color:#895900}.listhead{display:flex;justify-content:space-between;padding:10px 12px 3px;color:var(--muted);font-size:10px}.list{padding:7px 9px 20px}.card{margin-bottom:10px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 8px rgba(31,41,55,.05)}.cardtop{display:flex;justify-content:space-between;align-items:center}.rid{font-weight:900}.priority{padding:3px 6px;border-radius:5px;background:#f1f5f9;font-size:9px}.request-info{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:9px;border:1px solid #e6ebf1;border-radius:8px;background:#f8fafc;overflow:hidden}.info{min-width:0;padding:7px 8px;border-bottom:1px solid #e8edf2}.info:nth-child(odd):not(.wide){border-right:1px solid #e8edf2}.info.wide{grid-column:1/-1}.info:last-child{border-bottom:0}.ikey{margin-bottom:2px;color:#8a94a3;font-size:8px;font-weight:800;letter-spacing:.02em}.ival{color:#344054;font-size:10px;font-weight:700;line-height:1.4;overflow-wrap:anywhere;white-space:pre-wrap}.ival.empty{color:#a8b0bc;font-weight:400}.ival a{color:#315b8a;text-decoration:none}.flow{margin-top:12px}.stage{position:relative;display:grid;grid-template-columns:22px 1fr auto;gap:7px;align-items:center;padding:7px 0}.stage:not(:last-child):after{content:"";position:absolute;left:10px;top:29px;width:2px;height:18px;background:#dce3eb}.dot{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e8edf3;color:#718096;font-size:9px;font-weight:900}.stage.done .dot{background:#dcfce7;color:var(--green)}.stage.active .dot{background:#dbeafe;color:var(--blue)}.stage.ready .dot{background:#fff0d9;color:#b66a13}.sname{font-weight:800}.sdetail{margin-top:2px;color:var(--muted);font-size:9px}.tag{font-size:9px;font-weight:800;color:#64748b}.tag.done{color:var(--green)}.tag.active{color:var(--blue)}.actions{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:10px}.btn{display:inline-flex;height:33px;border:0;border-radius:7px;padding:0 10px;align-items:center;justify-content:center;background:var(--blue);color:#fff;font-size:10px;font-weight:900;cursor:pointer;text-decoration:none;font-family:inherit}.btn.complete{background:var(--green)}.btn.pause{background:var(--orange)}.btn.file{background:#334e68;color:#fff;border:1px solid #29435c;box-shadow:0 1px 2px rgba(31,41,55,.15)}.btn.file:hover{background:#263f57}.btn:disabled{cursor:not-allowed;opacity:.42}.emptylist{padding:36px 10px;text-align:center;color:#8995a8}.loading{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(246,248,251,.8);font-weight:800}.hidden{display:none}.error{margin:8px 9px;padding:9px;border-radius:7px;background:#fee2e2;color:#a33}.saving{opacity:1}.saving .btn:disabled{opacity:.65}
+.prep,.onholdflag{display:inline-flex;margin-top:8px;margin-right:4px;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:900}.prep{color:#9a5b0a;background:#fff1d6}.onholdflag{color:#a33;background:#fee2e2}.btn.crawlsubmit{background:#7c3fa0}.workbuttons{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}.workbuttons .btn{width:100%}.choicebackdrop{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(20,33,61,.38)}.choicebackdrop.hidden{display:none}.choicebox{width:100%;max-width:310px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 18px 45px rgba(15,23,42,.22)}.choicebox h2{margin:0 0 8px;font-size:16px}.choicebox p{margin:0;color:#536078;line-height:1.6}.choiceactions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:15px}.choiceactions .cancel{grid-column:1/-1;background:#eef2f7;color:#475569}
+</style></head><body>
+<header class="top"><div class="headline"><div class="title">내 작업함</div><button id="refreshButton" class="refresh" onclick="manualRefresh()">↻ 새로고침</button></div><div class="updated" id="updated">불러오는 중...</div><div class="worker"><label>작업자</label><select id="worker" onchange="saveWorker()"><option value="">작업자를 선택하세요</option></select></div><section class="active empty" id="active">선택한 작업자는 다음에도 자동 적용됩니다.</section></header><div id="message"></div><div class="listhead"><b>배정된 작업</b><span id="count">0개</span></div><main class="list" id="list"></main><div class="loading" id="loading">작업함 불러오는 중...</div><div id="barcodePrompt" class="choicebackdrop hidden" role="dialog" aria-modal="true" aria-labelledby="barcodePromptTitle"><div class="choicebox"><h2 id="barcodePromptTitle">바코드 제공 여부</h2><p id="barcodePromptText">2P 작업 시작 시점에 요청자로부터 바코드를 제공받았나요?</p><div class="choiceactions"><button type="button" class="btn complete" id="barcodeYes" onclick="answerBarcodeProvided('YES')">제공됨</button><button type="button" class="btn" onclick="answerBarcodeProvided('NO')">미제공</button><button type="button" class="btn cancel" onclick="answerBarcodeProvided('')">취소</button></div></div></div>
+<script>
+// BEGIN SHARED SESSION CLIENT
+// Shared verbatim by MyWorkSidebar and PersonalKanban (no external download).
+var SESSION_INFLIGHT=null,SESSION_MAINTENANCE_AT=0;
+function sessionStorageKey(){return 'listing-session-v1:'+String(DATA.spreadsheetId||location.pathname)+':'+(typeof ACTION_TARGET==='undefined'?'assignment':'sidebar');}
+function sessionStore(command){try{if(command)localStorage.setItem(sessionStorageKey(),JSON.stringify(command));else localStorage.removeItem(sessionStorageKey());}catch(ignored){}}
+function sessionNewCommand(command,active){
+ command.operationId=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);
+ command.issuedAt=Date.now();
+ if(command.action==='START')command.expectedActiveSessionId=active&&active.sessionId||'';
+ else command.sessionId=active&&active.sessionId||'';
+ return command;
+}
+function sessionRun(command,handlers,recover){
+ if(SESSION_INFLIGHT)return;
+ var operation={command:command,timer:null,watchdog:null,checking:false,finished:false};SESSION_INFLIGHT=operation;sessionStore(command);
+ function current(){return SESSION_INFLIGHT===operation&&!operation.finished;}
+ function pending(label){if(current()&&handlers.pending)handlers.pending(label);}
+ function schedule(check,delay){if(!current())return;clearTimeout(operation.timer);operation.timer=setTimeout(function(){if(check)query();else send();},delay||700);}
+ function finish(result){
+  if(!current())return;operation.finished=true;clearTimeout(operation.timer);clearTimeout(operation.watchdog);SESSION_INFLIGHT=null;sessionStore(null);
+  if(result.ok&&result.state==='COMMITTED'){
+   // This RPC is deliberately independent of the confirmed core result.
+   try{google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){}).finishWorkSessionCommand({operationId:command.operationId});}catch(ignored){}
+   handlers.success(result);
+  }else handlers.rejected(result);
+ }
+ function accept(result,fromQuery){
+  if(!current())return;
+  if(result&&result.ok===true&&result.state==='COMMITTED'&&result.snapshot&&result.sessionId){finish(result);return;}
+  if(result&&result.state==='REJECTED'){finish(result);return;}
+  pending(result&&result.state==='WAITING'?'다른 세션 저장을 기다리는 중…':'저장 상태 확인 중…');
+  schedule(!(fromQuery&&result&&result.state==='RETRY'),result&&result.retryAfterMs||1000);
+ }
+ function query(){
+  if(!current()||operation.checking)return;operation.checking=true;pending('저장 상태 확인 중…');
+  try{google.script.run.withSuccessHandler(function(result){operation.checking=false;accept(result,true);}).withFailureHandler(function(){operation.checking=false;schedule(true,2000);}).getWorkSessionCommandStatus(command);}
+  catch(error){operation.checking=false;schedule(true,2000);}
+ }
+ function send(){
+  if(!current())return;
+  clearTimeout(operation.watchdog);operation.watchdog=setTimeout(query,7000);
+  try{google.script.run.withSuccessHandler(function(result){if(!current())return;clearTimeout(operation.watchdog);accept(result,false);}).withFailureHandler(function(){if(!current())return;clearTimeout(operation.watchdog);pending('응답 확인 중… 저장 결과를 확인하고 있습니다.');schedule(true,700);}).setWorkSessionState(command);}
+  catch(error){schedule(true,700);}
+ }
+ if(recover)query();else send();
+}
+function sessionRestore(callback){
+ if(SESSION_INFLIGHT)return false;
+ try{var raw=localStorage.getItem(sessionStorageKey());if(!raw)return false;var command=JSON.parse(raw);if(!command.operationId)return false;callback(command);return true;}catch(ignored){return false;}
+}
+function sessionMaintenance(){
+ if(SESSION_INFLIGHT||Date.now()-SESSION_MAINTENANCE_AT<30000)return;SESSION_MAINTENANCE_AT=Date.now();
+ try{google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){}).maintainWorkSessionCommits();}catch(ignored){}
+}
+// END SHARED SESSION CLIENT
+var DATA={worker:'',workers:[],requests:[],workSessions:{sessions:[],active:[]}},BUSY=false;
+var POLL_TIMER=null,REVISION_PENDING=false,FETCHING=false,VIEW_EPOCH=0,ACTION_SNAPSHOT=null,LAST_FULL_AT=0,FORCE_FULL=false,SLOW_REQUEST='';
+function pollDelay(){var a=activeSession();return a&&a.requestId!==SLOW_REQUEST?1000:5000}
+function scheduleRevision(){clearTimeout(POLL_TIMER);POLL_TIMER=null;if(!document.hidden&&!BUSY&&!FETCHING&&!REVISION_PENDING)POLL_TIMER=setTimeout(checkRevision,pollDelay())}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function loading(show){document.getElementById('loading').classList.toggle('hidden',!show)}function fail(e){setManualRefresh(false);var wasAction=!!ACTION_SNAPSHOT;if(ACTION_SNAPSHOT){DATA=ACTION_SNAPSHOT;ACTION_SNAPSHOT=null;}BUSY=false;FETCHING=false;WORKER_SWITCH_PENDING=false;ACTION_TARGET='';loading(false);document.getElementById('worker').value=DATA.worker;document.getElementById('worker').disabled=false;document.body.classList.remove('saving');render();document.getElementById('message').innerHTML='<div class="error">'+esc(e.message||e)+'</div>';if(wasAction){FORCE_FULL=true;pgResume()}else scheduleRevision()}
+function assignees(v){return String(v||'').split(',').map(function(x){return x.trim()}).filter(Boolean)}
+function infoValue(v){return v?'<div class="ival">'+esc(v)+'</div>':'<div class="ival empty">—</div>'}
+function sourceValue(v){if(!v)return '';var safe=esc(v),isLink=/^https?:\/\//i.test(String(v));return '<div class="info wide"><div class="ikey">SOURCE</div><div class="ival">'+(isLink?'<a href="'+safe+'" target="_blank">'+safe+'</a>':safe)+'</div></div>'}
+function requestInfo(r){return '<div class="request-info"><div class="info"><div class="ikey">REQUESTOR</div>'+infoValue(r.requestor)+'</div><div class="info"><div class="ikey">BRAND</div>'+infoValue(r.brand)+'</div><div class="info"><div class="ikey">NODE</div>'+infoValue(r.node)+'</div><div class="info"><div class="ikey">A코드</div>'+infoValue(r.aCode)+'</div><div class="info wide"><div class="ikey">REQUEST TYPE</div>'+infoValue(r.requestType)+'</div>'+sourceValue(r.source)+(r.notes?'<div class="info wide"><div class="ikey">NOTES</div><div class="ival">'+esc(r.notes)+'</div></div>':'')+'</div>'}
+function acceptSidebarData(d,silent){var previous=DATA,next=d||DATA;if(silent&&previous.worker===next.worker){var known=new Map(previous.requests.map(function(r){return [r.requestId,r]}));next.requests.forEach(function(r){var old=known.get(r.requestId);if(!old)return;if(r.progressPending&&!old.progressPending)['assigned3P','done3P','assigned2P','done2P','totalVi','completed3P','completed2P'].forEach(function(k){r[k]=old[k]});if(r.progressPending&&!old.progressPending)r.progressPending=false;if(r.detailsPending&&!old.detailsPending)['requestor','brand','node','aCode','source','notes','originalFileUrl','crawlResultFileUrl'].forEach(function(k){r[k]=old[k]});if(r.detailsPending&&!old.detailsPending)r.detailsPending=false})}DATA=next;LAST_FULL_AT=Date.now();FORCE_FULL=false;if(!silent||previous.worker!==DATA.worker||JSON.stringify(previous.workers)!==JSON.stringify(DATA.workers))renderWorker();else document.getElementById('updated').textContent='마지막 반영 '+(DATA.updatedAt||'-');if(silent&&previous.worker===DATA.worker)patchCards(previous);else render()}
+
+var MANUAL_REFRESH=false;
+function setManualRefresh(value){MANUAL_REFRESH=value;var button=document.getElementById('refreshButton');if(button){button.disabled=value;button.textContent=value?'새로고침 중…':'↻ 새로고침';button.setAttribute('aria-busy',String(value));}document.getElementById('worker').disabled=value||BUSY||WORKER_SWITCH_PENDING;}
+function lightStructure(){var byId={};(DATA.candidateRequests||[]).concat(DATA.requests||[]).forEach(function(r){byId[r.requestId]=r;});return Object.keys(byId).map(function(id){var r=byId[id];return {requestId:id,requestType:r.requestType,crawlRequired:!!r.crawlRequired,crawlStage:r.crawlStage||''};});}
+function manualRefresh(){
+ if(MANUAL_REFRESH||BUSY||WORKER_SWITCH_PENDING)return;
+ setManualRefresh(true);clearTimeout(POLL_TIMER);FETCHING=true;var epoch=++VIEW_EPOCH,worker=DATA.worker,active=activeSession(),ids=DATA.requests.map(function(r){return r.requestId;});
+ if(active)ids.sort(function(a,b){return a===active.requestId?-1:b===active.requestId?1:0;});
+ function page(offset){google.script.run.withSuccessHandler(function(result){
+  if(epoch!==VIEW_EPOCH||worker!==DATA.worker)return;
+  if(!result||result.worker!==worker){FETCHING=false;setManualRefresh(false);scheduleRevision();return;}
+  if(result.mode==='reload'){FETCHING=false;load(false);return;}
+  var previous=JSON.parse(JSON.stringify(DATA));
+  (result.requests||[]).forEach(function(p){var r=DATA.requests.find(function(r){return r.requestId===p.requestId;});if(r)Object.assign(r,p,{progressPending:false});});
+  DATA.workSessions=result.workSessions;DATA.revision=result.revision;DATA.updatedAt=result.updatedAt;LAST_PROGRESS_AT=Date.now();FORCE_FULL=false;
+  patchCards(previous);document.getElementById('updated').textContent='마지막 반영 '+result.updatedAt;
+  if(offset+8<ids.length){page(offset+8);return;}
+  FETCHING=false;setManualRefresh(false);scheduleRevision();
+ }).withFailureHandler(function(e){if(epoch!==VIEW_EPOCH)return;fail(e);}).getMyWorkSidebarLight({worker:worker,structure:lightStructure(),requestIds:ids.slice(offset,offset+8)});}
+ page(0);
+}
+
+function load(silent){pgLoad(silent)}
+function checkRevision(){sessionMaintenance();clearTimeout(POLL_TIMER);POLL_TIMER=null;if(document.hidden||BUSY||FETCHING||REVISION_PENDING)return;REVISION_PENDING=true;var epoch=VIEW_EPOCH;google.script.run.withSuccessHandler(function(revision){REVISION_PENDING=false;var active=activeSession(),live=active&&['3P','2P'].indexOf(active.stage)>=0,changed=String(revision)!==String(DATA.revision||'0'),liveDue=live&&(changed||Date.now()-LAST_PROGRESS_AT>=3000);if(epoch===VIEW_EPOCH&&!document.hidden&&!BUSY&&!FETCHING&&(liveDue||FORCE_FULL||changed))refreshChangedRevision(revision,live);else scheduleRevision()}).withFailureHandler(function(){REVISION_PENDING=false;scheduleRevision()}).getMyWorkSidebarRevision()}
+function refreshChangedRevision(revision,live){
+ var active=activeSession(),r=active&&DATA.requests.find(function(item){return item.requestId===active.requestId});
+ // Refresh other cards/metadata on the next changed revision after 30s, not on every tick.
+ if(FORCE_FULL||!r||r.requestId===SLOW_REQUEST||['3P','2P'].indexOf(active.stage)<0||!live&&Date.now()-LAST_FULL_AT>=30000||String(revision).split(':')[0]!==String(DATA.revision).split(':')[0]){load(true);return}
+ FETCHING=true;LAST_PROGRESS_AT=Date.now();clearTimeout(POLL_TIMER);var epoch=++VIEW_EPOCH;
+ google.script.run.withSuccessHandler(function(result){
+  if(epoch!==VIEW_EPOCH)return;FETCHING=false;
+  if(result&&result.mode==='reload'){load(true);return;}
+  if(result&&result.mode==='full'){acceptSidebarData(result.data,true);SLOW_REQUEST=result.progressUnsupported||'';}
+  else if(result&&result.mode==='progress'&&result.worker===DATA.worker&&result.requestId===r.requestId){
+   SLOW_REQUEST='';
+   (result.counts||[]).forEach(function(c){if(c.stage==='3P'||c.stage==='2P'){r['assigned'+c.stage]=c.assigned;r['done'+c.stage]=c.completed}});
+   r.totalVi=result.totalVi;r.completed3P=result.completed3P;r.completed2P=result.completed2P;r.progressPending=false;DATA.revision=result.revision;
+   patchProgressCard(r); // No full card/list render, overlay or scroll reset.
+  }
+  scheduleRevision();
+ }).withFailureHandler(function(e){if(epoch!==VIEW_EPOCH)return;FETCHING=false;fail(e)}).getMyWorkProgressCounts({worker:DATA.worker,requestId:r.requestId,stage:active.stage,requestType:r.requestType,barcodeProvided:r.barcodeProvided,crawlRequired:r.crawlRequired,crawlStage:r.crawlStage,allowShellFallback:true});
+}
+function canComplete(r,stage){var assigned=Number(r['assigned'+stage])||0,completed=Number(r['done'+stage])||0;return !r.progressPending&&assigned>0&&completed>=assigned&&(stage!=='2P'||r.requestType!=='3P Listing 후 2P Lite 전환'||Number(r.assigned3P)>0&&Number(r.done3P)>=Number(r.assigned3P));}
+function patchProgressCard(r){
+ var node=document.getElementById('card-'+r.requestId);if(!node)return;
+ availableStages(r).forEach(function(stage,n){var row=node.querySelectorAll('.stage')[n],st=stageState(r,stage),cls=st.done?'done':st.active?'active':st.ready?'ready':'';row.dataset.stage=stage;row.className='stage '+cls;setText(row.querySelector('.dot'),st.done?'✓':n+1);setText(row.querySelector('.sdetail'),st.detail);var tag=row.querySelector('.tag');tag.className='tag '+cls;setText(tag,st.done?'완료':st.active?'진행 중':st.ready?'대기':'잠김')});
+ patchProgressActions(r);
+}
+function patchProgressActions(r){var node=document.getElementById('card-'+r.requestId);if(!node)return;var action=node.querySelector('.actions').firstElementChild,t=document.createElement('template');t.innerHTML=mainAction(r);if(action.outerHTML!==t.content.firstElementChild.outerHTML)action.replaceWith(t.content.firstElementChild);}
+function renderWorker(){var e=document.getElementById('worker');e.innerHTML='<option value="">작업자를 선택하세요</option>'+DATA.workers.map(function(w){return '<option value="'+esc(w)+'">'+esc(w)+'</option>'}).join('');e.value=DATA.worker||'';document.getElementById('updated').textContent='마지막 반영 '+(DATA.updatedAt||'-')}
+function saveWorker(){if(MANUAL_REFRESH){document.getElementById('worker').value=DATA.worker;return;}if(WORKER_SWITCH_PENDING)return;if(BUSY){document.getElementById('worker').value=DATA.worker;return}++VIEW_EPOCH;FETCHING=false;pgLoad(false,document.getElementById('worker').value)}
+function sessionFor(id,stage){return (DATA.workSessions.sessions||[]).filter(function(s){return s.requestId===id&&s.stage===stage&&s.worker===DATA.worker})[0]}
+function rawActiveSessions(){return (DATA.workSessions.active||[]).filter(function(s){return s.worker===DATA.worker&&s.status==='ACTIVE'&&['CRAWL','3P','2P'].indexOf(s.stage)>=0})}
+function requestForActiveSession(s){return s&&DATA.requests.find(function(r){return r.requestId===s.requestId&&['DONE','DROP'].indexOf(r.status)<0})}
+function activeSession(){return rawActiveSessions().filter(requestForActiveSession)[0]}
+function orphanActiveSession(){return rawActiveSessions().filter(function(s){return !requestForActiveSession(s)})[0]}
+function barcodeProvidedValue(value){value=String(value==null?'':value).trim().toUpperCase();return value==='YES'||value==='NO'?value:''}
+function barcodeProvidedLabel(value){value=barcodeProvidedValue(value);return value==='YES'?'바코드 제공됨':value==='NO'?'바코드 미제공':''}
+function stageState(r,stage){if(r.progressPending&&stage!=='CRAWL')return {done:false,active:false,ready:false,detail:'확인 중'};var s=sessionFor(r.requestId,stage),active=s&&s.status==='ACTIVE';if(stage==='CRAWL')return {done:r.crawlStage==='CRAWL_COMPLETED',active:active,ready:r.crawlAssignee===DATA.worker&&r.crawlStage!=='CRAWL_COMPLETED',detail:active?'크롤링 진행 중':'결과 제출 전'};if(stage==='3P'){var a3=Number(r.assigned3P||0),d3=Number(r.done3P||0),done=a3===0||d3>=a3;return {done:done,active:active,ready:a3>0&&!done,detail:a3?'내 배정 '+d3+' / '+a3+' VI':'내 배정 없음'}}var a2=Number(r.assigned2P||0),pd2=Number(r.done2P||0),d2=a2===0||pd2>=a2,gate=r.requestType!=='3P Listing 후 2P Lite 전환'||Number(r.assigned3P||0)>0&&Number(r.done3P||0)>=Number(r.assigned3P||0),barcode=barcodeProvidedLabel(r.barcodeProvided);return {done:d2,active:active,ready:a2>0&&gate&&!d2,detail:a2?(gate?'내 배정 '+pd2+' / '+a2+' VI'+(barcode?' · '+barcode:''):'내 3P 완료 후 가능'):'내 배정 없음'}}
+function stageRow(r,stage,n){var st=stageState(r,stage),name=stage==='CRAWL'?'상품 크롤링':stage==='3P'?'3P LISTING':'2P LITE',cls=st.done?'done':st.active?'active':st.ready?'ready':'';return '<div class="stage '+cls+'" data-stage="'+esc(stage)+'"><span class="dot">'+(st.done?'✓':n)+'</span><div><div class="sname">'+name+'</div><div class="sdetail">'+esc(st.detail)+'</div></div><span class="tag '+cls+'">'+(st.done?'완료':st.active?'진행 중':st.ready?'대기':'잠김')+'</span></div>'}
+function availableStages(r){if(r.crawlRequired&&r.crawlStage!=='CRAWL_COMPLETED')return ['CRAWL'];if(r.requestType==='3P Listing')return ['3P'];if(r.requestType==='2P Lite 전환')return ['2P'];return ['3P','2P']}
+// Keep request identity, focus and scroll position when only progress changes.
+function cardStructure(r){return JSON.stringify([requestInfo(r),r.priority,r.status,r.preparationStatus,r.originalFileUrl,r.crawlResultFileUrl,r.barcodeProvided,availableStages(r)])}
+function setText(node,value){value=String(value);if(node.textContent!==value)node.textContent=value}
+function patchCards(previous){
+ renderActive();var list=document.getElementById('list'),rows=DATA.worker?DATA.requests:[],old=new Map(previous.requests.map(function(r){return [r.requestId,r]})),keep=new Set(rows.map(function(r){return 'card-'+r.requestId}));
+ Array.from(list.children).forEach(function(node){if(!keep.has(node.id))node.remove()});
+ rows.forEach(function(r,index){
+  var node=document.getElementById('card-'+r.requestId),before=old.get(r.requestId);
+  if(!node||!before||cardStructure(before)!==cardStructure(r)){var template=document.createElement('template');template.innerHTML=card(r);var replacement=template.content.firstElementChild;if(node)node.replaceWith(replacement);node=replacement}
+  else {
+   availableStages(r).forEach(function(stage,n){var row=node.querySelectorAll('.stage')[n],st=stageState(r,stage),cls=st.done?'done':st.active?'active':st.ready?'ready':'';row.dataset.stage=stage;row.className='stage '+cls;setText(row.querySelector('.dot'),st.done?'✓':n+1);setText(row.querySelector('.sdetail'),st.detail);var tag=row.querySelector('.tag');tag.className='tag '+cls;setText(tag,st.done?'완료':st.active?'진행 중':st.ready?'대기':'잠김')});
+   var action=node.querySelector('.actions').firstElementChild,t=document.createElement('template');t.innerHTML=mainAction(r);if(action.outerHTML!==t.content.firstElementChild.outerHTML)action.replaceWith(t.content.firstElementChild);
+  }
+  if(list.children[index]!==node)list.insertBefore(node,list.children[index]||null);
+ });
+ setText(document.getElementById('count'),(DATA.membershipPending?'확인 중 · ':'')+rows.length+'개');if(!rows.length)list.innerHTML='<div class="emptylist">'+(DATA.membershipPending?'담당 요청 확인 중…':DATA.worker?'배정된 미완료 요청이 없습니다.':'작업자를 선택하세요.')+'</div>';
+}
+// Checked stages can START again; COMPLETE remains available only for confirmed ACTIVE sessions.
+function mainAction(r){if(WORKER_SWITCH_PENDING)return '<button class="btn" disabled>작업자 변경 중</button>';if(BUSY&&r.requestId===ACTION_TARGET)return '<button class="btn" disabled>'+esc(ACTION_LABEL)+'</button>';if(r.progressPending&&!(activeSession()&&activeSession().requestId===r.requestId))return '<button class="btn" disabled>수량 불러오는 중</button>';var stages=availableStages(r),active=activeSession(),ownActive=active&&active.requestId===r.requestId;if(r.status==='ON HOLD'&&!ownActive)return '<button class="btn" disabled>ON HOLD 해제 후 시작</button>';if(ownActive){var pause='<button class="btn pause" onclick="work(\''+esc(r.requestId)+'\',\''+active.stage+'\',\'PAUSE\')">일시중지</button>',complete='';if(active.stage==='CRAWL')complete='<button class="btn crawlsubmit" onclick="submitCrawl(\''+esc(r.requestId)+'\')">크롤링 제출</button>';else{var assigned=Number(active.stage==='3P'?r.assigned3P:r.assigned2P)||0,workerDone=Number(active.stage==='3P'?r.done3P:r.done2P)||0,ready=canComplete(r,active.stage);complete='<button class="btn complete" '+(ready?'onclick="work(\''+esc(r.requestId)+'\',\''+active.stage+'\',\'COMPLETE\')"':'disabled title="내게 배정된 VALID VI를 모두 체크해야 완료할 수 있습니다."')+'>'+active.stage+' 완료</button>'}return '<div class="workbuttons">'+pause+complete+'</div>'}for(var i=0;i<stages.length;i++){var stage=stages[i],st=stageState(r,stage);if(st.done)continue;if(!st.ready)return '<button class="btn" disabled>'+esc(st.detail)+'</button>';return '<button class="btn" onclick="work(\''+esc(r.requestId)+'\',\''+stage+'\',\'START\')">'+(stage==='CRAWL'?'크롤링':stage)+' 작업 시작</button>'}for(var j=stages.length-1;j>=0;j--){var finishedStage=stages[j];if(canComplete(r,finishedStage))return '<button class="btn" onclick="work(\''+esc(r.requestId)+'\',\''+finishedStage+'\',\'START\')">'+finishedStage+' 작업 시작</button>'}return '<button class="btn" disabled>완료</button>'}
+function card(r){var ss=availableStages(r),files='';if(r.originalFileUrl)files+='<a class="btn file" href="'+esc(r.originalFileUrl)+'" target="_blank" rel="noopener noreferrer">요청자 원본</a>';if(r.crawlResultFileUrl)files+='<a class="btn file" href="'+esc(r.crawlResultFileUrl)+'" target="_blank" rel="noopener noreferrer">크롤링 결과</a>';var badges=(r.preparationStatus?'<span class="prep">'+esc(r.preparationStatus)+'</span>':'')+(r.status==='ON HOLD'?'<span class="onholdflag">ON HOLD</span>':'');return '<article class="card" id="card-'+esc(r.requestId)+'"><div class="cardtop"><span class="rid">'+esc(r.requestId)+'</span><span class="priority">'+esc(r.priority)+'</span></div>'+(badges?'<div>'+badges+'</div>':'')+requestInfo(r)+'<div class="flow">'+ss.map(function(s,i){return stageRow(r,s,i+1)}).join('')+'</div><div class="actions">'+mainAction(r)+files+'</div></article>'}
+function renderActive(){var e=document.getElementById('active'),a=activeSession(),orphan=orphanActiveSession();if(!DATA.worker){e.className='active empty';e.textContent='작업자를 선택하면 다음부터 자동 적용됩니다.';return}if(!a&&orphan){e.className='active empty';e.innerHTML='<b>'+esc(orphan.requestId)+' 세션 정리 대기</b>DROP 상태이거나 작업함에서 제외된 요청입니다.';return}if(!a){e.className='active empty';e.innerHTML='<b>'+esc(DATA.worker)+'</b>현재 진행 중인 작업 없음';return}e.className='active';e.innerHTML='<b>'+esc(a.requestId)+' · '+esc(a.stage)+' 진행 중</b>시작 '+esc(a.startedAt)+' · 누적 '+Math.round(a.elapsedMinutes)+'분'}
+function render(){document.getElementById('message').innerHTML='';renderActive();var rows=DATA.worker?DATA.requests:[];document.getElementById('count').textContent=(DATA.membershipPending?'확인 중 · ':'')+rows.length+'개';document.getElementById('list').innerHTML=rows.length?rows.map(card).join(''):'<div class="emptylist">'+(DATA.membershipPending?'담당 요청 확인 중…':DATA.worker?'배정된 미완료 요청이 없습니다.':'작업자를 선택하세요.')+'</div>'}
+function begin(id,label){ACTION_SNAPSHOT=JSON.parse(JSON.stringify(DATA));PG_RESUME=FETCHING||DATA.membershipPending||DATA.requests.some(function(r){return r.progressPending||r.detailsPending});BUSY=true;FETCHING=false;ACTION_TARGET=id||'';ACTION_LABEL=label||'저장 중…';++VIEW_EPOCH;clearTimeout(POLL_TIMER);document.getElementById('worker').disabled=true;var r=DATA.requests.find(function(x){return x.requestId===id}),node=document.getElementById('card-'+id);if(r&&node){var action=node.querySelector('.actions').firstElementChild,t=document.createElement('template');t.innerHTML=mainAction(r);action.replaceWith(t.content.firstElementChild)}}
+function done(res){res=res||{};var previous=ACTION_SNAPSHOT||JSON.parse(JSON.stringify(DATA));FORCE_FULL=!res.revision||!!res.needsRefresh||String(res.revision).split(':')[0]!==String(DATA.revision).split(':')[0];ACTION_SNAPSHOT=null;BUSY=false;ACTION_TARGET='';document.getElementById('worker').disabled=false;if(res.requestPatch){var patched=DATA.requests.find(function(r){return r.requestId===res.requestPatch.requestId});if(patched)Object.assign(patched,res.requestPatch)}if(res.snapshot){DATA.workSessions={sessions:res.snapshot.sessions.filter(function(s){return s.worker===DATA.worker}),active:res.snapshot.active.filter(function(s){return s.worker===DATA.worker})}}(res.progress||[]).forEach(function(p){var r=DATA.requests.find(function(r){return r.requestId===p.requestId});if(r)Object.assign(r,p,{progressPending:false})});DATA.requests=DATA.requests.filter(function(r){if(['DONE','DROP'].indexOf(r.status)>=0)return false;var updated=(res.progress||[]).some(function(p){return p.requestId===r.requestId});return !updated||r.assigned3P>0||r.assigned2P>0||r.crawlRequired&&r.crawlStage!=='CRAWL_COMPLETED'&&r.crawlAssignee===DATA.worker});if(res.revision)DATA.revision=res.revision;patchCards(previous);pgResume()}
+function showBarcodeProvidedPrompt(intent){BARCODE_INTENT=intent;document.getElementById('barcodePromptText').textContent='2P 작업 '+(intent.action==='COMPLETE'?'완료':'시작')+' 시점에 요청자로부터 바코드를 제공받았나요?';document.getElementById('barcodePrompt').classList.remove('hidden');document.getElementById('barcodeYes').focus()}
+function answerBarcodeProvided(value){var intent=BARCODE_INTENT;BARCODE_INTENT=null;document.getElementById('barcodePrompt').classList.add('hidden');if(!intent||!value)return;intent.barcodeProvided=value;runWork(intent)}
+function work(id,stage,action){
+ if(BUSY||WORKER_SWITCH_PENDING)return;
+ if(MANUAL_REFRESH){setManualRefresh(false);FETCHING=false;++VIEW_EPOCH;}
+ var r=DATA.requests.find(function(r){return r.requestId===id}),a=activeSession();
+ if(!r||action==='START'&&r.progressPending)return;
+ if(action==='START'&&a&&(a.requestId!==id||a.stage!==stage)&&!confirm(a.requestId+' / '+a.stage+' 작업을 중지하고 전환할까요?'))return;
+ var intent={id:id,stage:stage,action:action,barcodeProvided:barcodeProvidedValue(r.barcodeProvided),startCompletedVi:action==='START'&&(stage==='3P'||stage==='2P')?(Number(stage==='3P'?r.done3P:r.done2P)||0):null};
+ if(stage==='2P'&&(action==='START'||action==='COMPLETE')&&!intent.barcodeProvided){showBarcodeProvidedPrompt(intent);return;}
+ runWork(intent);
+}
+function sidebarSessionHandlers(command){return {
+ pending:function(label){ACTION_LABEL=label;render();},
+ success:function(res){var sameWorker=command.worker===DATA.worker;if(!sameWorker)res=Object.assign({},res,{snapshot:DATA.workSessions});done(res);render();if(sameWorker&&command.action==='START'&&res.sessionStatus==='ACTIVE')google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){document.getElementById('message').textContent='세션은 시작되었습니다. 작업 시트로 이동은 다시 눌러 주세요.';}).navigateCommittedSession({operationId:command.operationId});},
+ rejected:function(res){if(res.snapshot){DATA.workSessions=res.snapshot;ACTION_SNAPSHOT=null;}fail({message:res.message||'작업 상태를 변경하지 않았습니다.'});}
+};}
+function restoreSidebarSession(){return sessionRestore(function(command){begin(command.requestId,'이전 저장 상태 확인 중…');sessionRun(command,sidebarSessionHandlers(command),true);});}
+function runWork(intent){var id=intent.id,stage=intent.stage,action=intent.action,command={worker:DATA.worker,requestId:id,stage:stage,action:action,sidebarResult:true,expectedRevision:DATA.revision};
+ if(intent.barcodeProvided)command.barcodeProvided=intent.barcodeProvided;
+ begin(id,action==='START'?'시작 처리 중…':action==='COMPLETE'?'완료 처리 중…':'중지 처리 중…');
+ sessionNewCommand(command,activeSession());sessionRun(command,sidebarSessionHandlers(command));
+}
+function submitCrawl(id){if(BUSY||FETCHING)return;google.script.run.withFailureHandler(fail).showCrawlResultDialogForRequest(id,DATA.worker)}
+function moveCurrent(id){var r=DATA.requests.filter(function(x){return x.requestId===id})[0],a=activeSession(),stages=availableStages(r),stage=a&&a.requestId===id?a.stage:stages.filter(function(s){return !stageState(r,s).done})[0]||stages[0];if(stage)google.script.run.withFailureHandler(fail).goToMyWorkRows(id,stage,DATA.worker)}
+// Sequential progressive reads. VIEW_EPOCH prevents cancelled reads from repainting a new view.
+var ACTION_TARGET='',ACTION_LABEL='',PG_RESUME=false,WORKER_SWITCH_PENDING=false,BARCODE_INTENT=null,LAST_PROGRESS_AT=0;
+function pgPayload(ids){return {worker:DATA.worker,revision:DATA.revision,requestIds:ids||[],candidates:DATA.candidateRequests||[],activeRequestIds:rawActiveSessions().filter(requestForActiveSession).map(function(s){return s.requestId;})};}
+function pgApply(cards,ids){var previous=JSON.parse(JSON.stringify(DATA)),replace=new Set(ids),map=new Map(cards.map(function(r){return [r.requestId,r];}));
+ DATA.requests=DATA.requests.filter(function(r){return !replace.has(r.requestId)||map.has(r.requestId);}).map(function(r){var next=map.get(r.requestId);if(next){map.delete(r.requestId);return Object.assign({},r,next);}return r;});map.forEach(function(r){DATA.requests.push(r);});patchCards(previous);
+}
+function pgRpc(method,payload,epoch,next){var worker=DATA.worker,revision=DATA.revision;
+ google.script.run.withSuccessHandler(function(result){if(epoch!==VIEW_EPOCH||worker!==DATA.worker||revision!==DATA.revision)return;
+  if(!result||result.stale||result.worker!==worker||result.revision!==revision){FETCHING=false;FORCE_FULL=true;scheduleRevision();return;}next(result);
+ }).withFailureHandler(function(e){if(epoch!==VIEW_EPOCH)return;FETCHING=false;fail(e);})[method](payload);
+}
+function pgBatches(epoch,ids,details){if(epoch!==VIEW_EPOCH||BUSY)return;
+ if(!ids.length){if(!details){pgBatches(epoch,DATA.requests.filter(function(r){return r.detailsPending;}).map(function(r){return r.requestId;}),true);}else{FETCHING=false;scheduleRevision();}return;}
+ var batch=ids.slice(0,8);pgRpc(details?'getMyWorkSidebarDetails':'getMyWorkSidebarBatch',pgPayload(batch),epoch,function(res){
+  if(details){var previous=JSON.parse(JSON.stringify(DATA));res.requests.forEach(function(extra){var r=DATA.requests.find(function(r){return r.requestId===extra.requestId;});if(r)Object.assign(r,extra,{detailsPending:false});});patchCards(previous);}
+  else pgApply(res.requests,batch);
+  pgBatches(epoch,ids.slice(8),details);
+ });
+}
+function pgDiscover(epoch){pgRpc('discoverMyWorkSidebarRequests',pgPayload(),epoch,function(res){
+ var previous=JSON.parse(JSON.stringify(DATA)),existing=new Map(DATA.requests.map(function(r){return [r.requestId,r];}));
+ DATA.requests=(res.requests||[]).map(function(r){var old=existing.get(r.requestId);return old&&!old.progressPending?old:r;});DATA.membershipPending=false;patchCards(previous);
+ pgBatches(epoch,DATA.requests.filter(function(r){return r.progressPending;}).map(function(r){return r.requestId;}),false);
+});}
+function pgLoad(silent,worker){if(BUSY||FETCHING)return;FETCHING=true;clearTimeout(POLL_TIMER);var epoch=++VIEW_EPOCH;if(worker!==undefined){WORKER_SWITCH_PENDING=true;document.getElementById('worker').disabled=true;render();}if(!silent&&!DATA.requests.length)loading(true);
+ var rpc=google.script.run.withSuccessHandler(function(d){if(epoch!==VIEW_EPOCH)return;WORKER_SWITCH_PENDING=false;setManualRefresh(false);document.getElementById('worker').disabled=false;acceptSidebarData(d,!!silent);loading(false);if(restoreSidebarSession()){FETCHING=false;return;}
+  if(!d.progressive||!DATA.worker){FETCHING=false;scheduleRevision();return;}
+  if(!(DATA.candidateRequests||[]).length){DATA.membershipPending=false;FETCHING=false;render();scheduleRevision();return;}
+  // 실제 Task 담당 목록을 먼저 확정한 뒤 한 번만 상세 조회해 임시 목록 교체와 중복 조회를 방지함.
+  pgDiscover(epoch);
+ }).withFailureHandler(function(e){if(epoch!==VIEW_EPOCH)return;FETCHING=false;fail(e);});if(worker===undefined)rpc.getMyWorkSidebarInitial();else rpc.saveMyWorkSidebarWorker(worker,true);
+}
+function pgResume(){if(!DATA.progressive||!PG_RESUME||BUSY){scheduleRevision();return;}PG_RESUME=false;FETCHING=true;var epoch=++VIEW_EPOCH;
+ if(DATA.membershipPending)pgDiscover(epoch);else pgBatches(epoch,DATA.requests.filter(function(r){return r.progressPending;}).map(function(r){return r.requestId;}),false);
+}
+
+load(false);document.addEventListener('visibilitychange',function(){clearTimeout(POLL_TIMER);if(!document.hidden)checkRevision()});
+</script></body></html>

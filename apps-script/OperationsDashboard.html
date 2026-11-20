@@ -1,0 +1,1262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --blue: #4673d1;
+      --blue-dark: #315dae;
+      --blue-soft: #edf3ff;
+      --teal: #26958d;
+      --teal-soft: #eaf7f5;
+      --ink: #172033;
+      --text: #3f4a5d;
+      --muted: #7d8798;
+      --line: #e4e9f1;
+      --line-strong: #d8e0eb;
+      --surface: #fff;
+      --surface-muted: #f8f9fc;
+      --bg: #f4f6fa;
+      --red: #c44b47;
+      --red-soft: #fff0ef;
+      --amber: #a46908;
+      --amber-soft: #fff7e5;
+      --green: #17826f;
+      --green-soft: #eaf7f3;
+      --shadow: 0 10px 30px rgba(31, 48, 78, .06);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px Arial, 'Malgun Gothic', sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid rgba(70, 115, 209, .5);
+      outline-offset: 2px;
+    }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 16px 25px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .96);
+      backdrop-filter: blur(10px);
+    }
+    .titleRow, .toolbar, .head, .alert, .worker, .nodeTop, .leadrow,
+    .filterGroup, .workerTools, .metricFoot, .legend, .trendTools, .brandCompareTop {
+      display: flex;
+      align-items: center;
+    }
+    .titleRow h1 {
+      margin: 0 0 3px;
+      color: var(--ink);
+      font-size: 22px;
+      letter-spacing: -.4px;
+    }
+    .sub, .meta, .hint { color: var(--muted); font-size: 11px; }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .actions .meta { max-width: 310px; text-align: right; }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-top: 14px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .tab {
+      position: relative;
+      flex: none;
+      min-width: 104px;
+      height: 38px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 9px 9px 0 0;
+      background: transparent;
+      color: #697589;
+      font-weight: 600;
+    }
+    .tab:hover { background: #f4f6fa; color: var(--ink); }
+    .tab[aria-selected="true"] { background: var(--blue-soft); color: var(--blue-dark); }
+    .tab[aria-selected="true"]::after {
+      position: absolute;
+      right: 12px;
+      bottom: 0;
+      left: 12px;
+      height: 2px;
+      border-radius: 2px 2px 0 0;
+      background: var(--blue);
+      content: '';
+    }
+
+    .toolbar {
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .filterGroup, .workerTools { gap: 8px; }
+    .btn, .select, .dates, .seg {
+      min-height: 34px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .btn {
+      padding: 0 12px;
+      color: #526076;
+    }
+    .btn:hover { border-color: #bdc9da; color: var(--ink); }
+    .btn.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn.primary:hover { border-color: var(--blue-dark); background: var(--blue-dark); }
+    .btn:disabled { cursor: wait; opacity: .55; }
+    .close { width: 34px; padding: 0; font-size: 19px; }
+    .dates {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: #a3aabb;
+    }
+    .dates input, .select select {
+      height: 32px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+    }
+    .dates input { width: 119px; }
+    .select {
+      display: flex;
+      align-items: center;
+      padding-left: 9px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .select select { max-width: 160px; padding: 0 6px; }
+    .seg { padding: 2px; border: 0; background: #f0f3f7; }
+    .seg button, .series button {
+      height: 30px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+    }
+    .seg button[aria-pressed="true"], .series button.on {
+      background: #fff;
+      color: var(--blue);
+      box-shadow: 0 1px 4px rgba(27, 43, 69, .12);
+    }
+    main { max-width: 1420px; margin: auto; padding: 20px 25px 34px; }
+    .tabPanel { animation: panel-in .16s ease-out; }
+    @keyframes panel-in { from { opacity: .5; transform: translateY(2px); } }
+    .pageIntro { margin: 1px 0 17px; }
+    .pageIntro h2 { margin: 0 0 5px; color: var(--ink); font-size: 19px; }
+    .pageIntro p { margin: 0; color: var(--muted); font-size: 12px; }
+    .sectionLabel {
+      margin: 18px 1px 9px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .sectionLabel small { margin-left: 7px; color: var(--muted); font-size: 10px; font-weight: 500; }
+
+    .alert {
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 11px 13px;
+      border: 1px solid #f0ddb7;
+      border-radius: 10px;
+      background: var(--amber-soft);
+      color: #73531d;
+    }
+    .alert details { max-width: 58%; margin-left: auto; }
+    .alert summary { color: var(--amber); cursor: pointer; font-size: 11px; list-style: none; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+    .metrics.current { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .metrics.workerSummary, .metrics.brandSummary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .metric, .panel, .nodeCard {
+      border: 1px solid rgba(222, 228, 238, .9);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .metric {
+      min-height: 105px;
+      padding: 16px 18px;
+      border-radius: 12px;
+    }
+    .metric.compact { min-height: 98px; }
+    .label { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .value {
+      margin: 10px 0 8px;
+      color: var(--ink);
+      font-size: 29px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .value small { color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+    .metric.block .value { color: var(--red); }
+    .metricFoot { gap: 15px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+    .metricFoot b { color: var(--ink); font-size: 13px; }
+
+    .panel {
+      margin-bottom: 15px;
+      padding: 19px 21px;
+      border-radius: 13px;
+    }
+    .head { margin-bottom: 17px; }
+    .head h2 { margin: 0 0 4px; color: var(--ink); font-size: 15px; }
+    .right { margin-left: auto; }
+    .series { padding: 3px; border-radius: 8px; background: #f1f4f8; white-space: nowrap; }
+    .grid2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 15px; }
+
+    .overviewNodeGrid, .nodeSummaryGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+      gap: 11px;
+    }
+    .nodeCard { padding: 15px; border-radius: 11px; box-shadow: none; }
+    .nodeCard .nodeTop { margin-bottom: 11px; }
+    .nodeName { color: var(--ink); font-weight: 700; }
+    .nodeStats { margin-left: auto; color: var(--muted); font-size: 11px; }
+    .nodeFacts { display: flex; gap: 15px; margin-top: 11px; color: var(--muted); font-size: 10px; flex-wrap: wrap; }
+    .nodeFacts b { display: block; margin-top: 3px; color: var(--ink); font-size: 13px; }
+    .blocked { margin-left: 7px; padding: 3px 6px; border-radius: 5px; background: var(--red-soft); color: var(--red); }
+
+    .workerChart { display: grid; gap: 13px; }
+    .worker { gap: 15px; }
+    .workerName {
+      width: 115px;
+      flex: none;
+      overflow: hidden;
+      color: var(--ink);
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bars { display: grid; gap: 6px; flex: 1; }
+    .barline { display: grid; grid-template-columns: 28px 1fr 62px; gap: 8px; align-items: center; }
+    .stage { color: var(--blue); font-size: 10px; font-weight: 700; }
+    .stage.two { color: var(--teal); }
+    .track, .progress {
+      overflow: hidden;
+      border-radius: 7px;
+      background: #edf1f6;
+    }
+    .track { height: 9px; }
+    .fill { min-width: 1px; height: 100%; border-radius: 7px; background: var(--blue); }
+    .fill.two { background: var(--teal); }
+    .barval { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+    .negative { color: var(--red); }
+
+    .barcodeCards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .barcodeCards .metric { background: var(--surface-muted); box-shadow: none; }
+    .barcodeNote { margin-top: 11px; line-height: 1.55; }
+    .trend { height: 230px; overflow-x: auto; }
+    .trend svg { display: block; height: 220px; }
+    .grid { stroke: #edf0f5; }
+    .axis { fill: #8a94a5; font-size: 9px; }
+    .p3 { fill: none; stroke: var(--blue); stroke-width: 2.2; }
+    .p2 { fill: none; stroke: var(--teal); stroke-width: 2.2; }
+    .d3 { fill: var(--blue); }
+    .d2 { fill: var(--teal); }
+    .legend { gap: 14px; color: var(--muted); font-size: 11px; }
+    .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: var(--blue); }
+    .legend .two i { background: var(--teal); }
+    .trendTools { gap: 14px; flex-wrap: wrap; }
+
+    .brandCompare { display: grid; gap: 0; }
+    .brandCompareRow { padding: 14px 2px; border-top: 1px solid var(--line); }
+    .brandCompareRow:first-child { padding-top: 1px; border-top: 0; }
+    .brandCompareTop { gap: 12px; margin-bottom: 9px; }
+    .brandName {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--ink);
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .brandOverall { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .brandDefinition {
+      margin-bottom: 13px;
+      padding: 12px 14px;
+      border: 1px solid #dce5f4;
+      border-radius: 9px;
+      background: var(--blue-soft);
+      color: #53627a;
+      font-size: 11px;
+      line-height: 1.65;
+    }
+    .brandDefinition b { color: var(--blue-dark); }
+    #brandTable .detail { min-width: 1180px; }
+
+    .heat { width: 100%; border-spacing: 4px; }
+    .heat th { color: var(--muted); font-size: 10px; font-weight: 500; }
+    .heat td { height: 34px; min-width: 44px; border-radius: 6px; font-size: 11px; text-align: center; }
+    .heat th:first-child, .heat td:first-child {
+      min-width: 105px;
+      max-width: 150px;
+      overflow: hidden;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .leadSummary { display: flex; gap: 30px; margin-bottom: 13px; padding-bottom: 13px; border-bottom: 1px solid var(--line); }
+    .leadSummary strong { display: block; margin-top: 4px; color: var(--ink); font-size: 23px; }
+    .leadlist { display: grid; gap: 12px; }
+    .leadrow { gap: 9px; }
+    .leadname { width: 110px; overflow: hidden; color: var(--ink); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .leadtrack { height: 7px; flex: 1; overflow: hidden; border-radius: 6px; background: #eff2f6; }
+    .leadfill { height: 100%; background: #7896d9; }
+    .leadvalue { width: 58px; font-weight: 600; text-align: right; }
+    .n { width: 38px; color: var(--muted); font-size: 10px; text-align: right; }
+    .node { padding: 14px 2px; border-top: 1px solid var(--line); }
+    .node:first-child { padding-top: 1px; border: 0; }
+    .stages { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 11px; }
+    .stageRow { display: grid; grid-template-columns: 29px 1fr; gap: 8px; }
+    .progressMeta { display: flex; justify-content: space-between; margin-bottom: 5px; color: var(--muted); font-size: 10px; }
+    .progress { height: 7px; }
+    .progress i { display: block; height: 100%; background: var(--blue); }
+    .progress.two i { background: var(--teal); }
+
+    .backlogRow {
+      display: grid;
+      grid-template-columns: 110px 140px minmax(150px, 1fr) 120px 70px;
+      gap: 12px;
+      align-items: center;
+      min-height: 43px;
+      border-top: 1px solid var(--line);
+    }
+    .backlogRow.header { min-height: 31px; border: 0; color: var(--muted); font-size: 10px; }
+    .backlogRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .req { color: var(--blue-dark); font-weight: 700; }
+    .age { font-weight: 700; text-align: right; }
+    .age.old { color: var(--red); }
+    .more { display: block; margin: 12px auto 0; }
+
+    .tableScroll { overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .detail { width: 100%; border-collapse: collapse; }
+    .detail th, .detail td {
+      height: 42px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+    .detail th { color: var(--muted); font-size: 10px; font-weight: 500; }
+    .detail tr:last-child td { border-bottom: 0; }
+    .detail .num { text-align: right; }
+
+    .empty { padding: 26px 6px; color: var(--muted); font-size: 12px; text-align: center; }
+    .emptyInline { padding: 12px; border-radius: 8px; background: var(--surface-muted); color: var(--muted); font-size: 11px; }
+    details.data { margin-top: 12px; }
+    details.data summary, .method summary { color: var(--muted); cursor: pointer; font-size: 11px; }
+    .method { padding: 4px 2px; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .method p { margin-bottom: 0; }
+    .hidden { display: none !important; }
+    #status { padding: 90px 5px; color: var(--muted); text-align: center; }
+    .spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 7px;
+      border: 2px solid #dce4f1;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      vertical-align: -3px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #error { margin: 8px 0 0; color: #a43e38; }
+
+    @media (max-width: 1080px) {
+      .metrics.workerSummary, .metrics.brandSummary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .top, main { padding-right: 15px; padding-left: 15px; }
+      .metrics, .metrics.workerSummary, .metrics.brandSummary { grid-template-columns: 1fr 1fr; }
+      .barcodeCards, .grid2 { grid-template-columns: 1fr; }
+      .stages { grid-template-columns: 1fr; }
+      .actions .meta { display: none; }
+    }
+    @media (max-width: 650px) {
+      .titleRow h1 { font-size: 19px; }
+      .actions { gap: 5px; }
+      #refreshTop { width: 34px; overflow: hidden; padding: 0; color: transparent; }
+      #refreshTop::first-letter { color: #526076; }
+      .tabs { margin-right: -15px; margin-left: -15px; padding: 0 15px; }
+      .tab { min-width: 94px; padding: 0 11px; }
+      .toolbar, .filterGroup { align-items: stretch; }
+      .toolbar { display: grid; grid-template-columns: 1fr auto; }
+      .filterGroup { display: grid; grid-column: 1 / -1; grid-template-columns: 1fr; }
+      .dates { justify-content: center; }
+      .dates input { min-width: 0; width: 46%; }
+      .select { justify-content: space-between; }
+      .select select { max-width: none; flex: 1; text-align: right; }
+      .workerTools { display: grid; grid-column: 1 / -1; grid-template-columns: 1fr; }
+      .seg { display: flex; }
+      .seg button { flex: 1; }
+      .metrics, .metrics.current, .metrics.workerSummary, .metrics.brandSummary { grid-template-columns: 1fr; }
+      .panel { padding: 16px; }
+      .head { align-items: flex-start; gap: 12px; }
+      .trendHead { flex-wrap: wrap; }
+      .trendTools { width: 100%; margin-left: 0; justify-content: space-between; }
+      .series { overflow-x: auto; }
+      .worker { align-items: flex-start; flex-direction: column; gap: 7px; }
+      .workerName { width: 100%; }
+      .barcodeCards { grid-template-columns: 1fr; }
+      .backlogRow { grid-template-columns: 98px 1fr 70px; }
+      .backlogRow span:nth-child(2), .backlogRow span:nth-child(3) { display: none; }
+      .alert { align-items: flex-start; flex-wrap: wrap; }
+      .alert details { width: 100%; max-width: none; margin-left: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="titleRow">
+      <div>
+        <h1>운영 Dashboard</h1>
+        <div class="sub">Listing Operations · Admin</div>
+      </div>
+      <div class="actions">
+        <span class="meta" id="meta">REQUESTS · WORK_SESSIONS</span>
+        <button class="btn" id="refreshTop" type="button">↻ 새로고침</button>
+        <button class="btn close" id="close" type="button" aria-label="Dashboard 닫기">×</button>
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Dashboard 화면">
+      <button class="tab" id="tab-overview" type="button" role="tab" aria-controls="panel-overview" aria-selected="true" data-tab="overview">전체 현황</button>
+      <button class="tab" id="tab-workers" type="button" role="tab" aria-controls="panel-workers" aria-selected="false" tabindex="-1" data-tab="workers">작업자</button>
+      <button class="tab" id="tab-brand" type="button" role="tab" aria-controls="panel-brand" aria-selected="false" tabindex="-1" data-tab="brand">Brand</button>
+      <button class="tab" id="tab-nodes" type="button" role="tab" aria-controls="panel-nodes" aria-selected="false" tabindex="-1" data-tab="nodes">Node</button>
+    </nav>
+
+    <form id="filters" class="toolbar">
+      <div class="filterGroup">
+        <div class="dates" id="periodFilter" aria-label="조회 기간">
+          <input type="date" id="from" aria-label="시작일" required>
+          <span>~</span>
+          <input type="date" id="to" aria-label="종료일" required>
+        </div>
+        <label class="select" id="nodeFilter">Node
+          <select id="node"><option value="">전체</option></select>
+        </label>
+      </div>
+      <div class="workerTools hidden" id="workerTools">
+        <label class="select">작업자
+          <select id="worker"><option value="">전체</option></select>
+        </label>
+      </div>
+      <button class="btn primary" id="query" type="submit">조회</button>
+    </form>
+    <div id="error" class="hidden" role="alert"></div>
+  </header>
+
+  <main>
+    <div id="status" aria-live="polite"><span class="spin"></span>Dashboard를 불러오는 중입니다</div>
+    <div id="content" class="hidden">
+      <section class="tabPanel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+        <div class="pageIntro">
+          <h2>전체 현황</h2>
+          <p>운영 상태와 주요 이슈를 한눈에 확인합니다.</p>
+        </div>
+
+        <div id="notice" class="alert hidden">
+          <b aria-hidden="true">⚠</b>
+          <span id="noticeMain"></span>
+          <details>
+            <summary>자세히</summary>
+            <span id="noticeDetail" class="hint"></span>
+          </details>
+        </div>
+
+        <div class="sectionLabel">선택 기간 <small>요청 접수와 완료 성과</small></div>
+        <div id="metrics" class="metrics"></div>
+
+        <div class="sectionLabel">현재 상태 <small>조회 기간과 무관한 현재 요청 상태</small></div>
+        <div id="currentMetrics" class="metrics current"></div>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>현재 작업 현황</h2>
+              <div class="sub">Node별 미완료 요청과 작업 진행을 요약합니다.</div>
+            </div>
+          </div>
+          <div id="overviewNodes" class="overviewNodeGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>확인 필요</h2>
+              <div class="sub">오래 대기 중인 요청 · 요청일 기준 최대 20건</div>
+            </div>
+          </div>
+          <div id="backlog"></div>
+          <button id="more" class="btn more hidden" type="button">전체 보기</button>
+        </section>
+      </section>
+
+      <section class="tabPanel hidden" id="panel-workers" role="tabpanel" aria-labelledby="tab-workers">
+        <div class="pageIntro">
+          <h2>작업자</h2>
+          <p>작업량과 생산성을 작업자별로 확인합니다.</p>
+        </div>
+
+        <div class="sectionLabel">작업자 요약 <small>현재 기간 · Node · 작업자 조건</small></div>
+        <div id="workerSummary" class="metrics workerSummary"></div>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>작업자 생산성</h2>
+              <div class="sub">확정 세션 기준 · Stage별 VI/hour와 팀 중앙값 대비 편차</div>
+            </div>
+            <div class="series right" aria-label="생산성 Stage">
+              <button type="button" data-series="all" class="on">3P + 2P</button>
+              <button type="button" data-series="threeP">3P</button>
+              <button type="button" data-series="twoP">2P</button>
+            </div>
+          </div>
+          <div id="workers" class="workerChart"></div>
+          <details class="data">
+            <summary>작업시간·완료량·담당 REQ 상세</summary>
+            <div id="workerDetail"></div>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="head trendHead">
+            <div>
+              <h2 id="trendTitle">Daily 생산성 추이</h2>
+              <div class="sub">기간별 확정 완료 VI 흐름</div>
+            </div>
+            <div class="trendTools right">
+              <div class="seg" aria-label="생산성 집계 단위">
+                <button type="button" id="daily" aria-pressed="true">Daily</button>
+                <button type="button" id="monthly" aria-pressed="false">Monthly</button>
+              </div>
+              <div class="legend"><span><i></i>3P</span><span class="two"><i></i>2P</span></div>
+            </div>
+          </div>
+          <div id="trend" class="trend"></div>
+          <details class="data">
+            <summary>상세 데이터 보기</summary>
+            <div id="productivity"></div>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>바코드 제공 여부별 2P Lite 생산성</h2>
+              <div class="sub">종료된 2P 세션의 pooled VI/worker-hour</div>
+            </div>
+          </div>
+          <div id="barcodeProductivity"></div>
+        </section>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>REQ 효율</h2>
+              <div class="sub">Lead Time과 인력 효율을 분리 · 작업자 수별 결과는 관찰 비교</div>
+            </div>
+          </div>
+          <div id="reqEfficiency"></div>
+        </section>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>동일 조건 Benchmark</h2>
+              <div class="sub">동일 Stage · 브랜드 · REQ 규모 내 비교</div>
+            </div>
+          </div>
+          <div id="benchmark"></div>
+        </section>
+      </section>
+
+      <section class="tabPanel hidden" id="panel-brand" role="tabpanel" aria-labelledby="tab-brand">
+        <div class="pageIntro">
+          <h2>Brand</h2>
+          <p>작업자 선택과 무관한 Brand별 생산성·작업 난이도 관찰 지표입니다.</p>
+        </div>
+
+        <div class="sectionLabel">Brand 요약 <small>현재 기간 · Node 조건 · 전체 작업자 기준</small></div>
+        <div id="brandSummary" class="metrics brandSummary"></div>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>브랜드별 3P / 2P 생산성 비교</h2>
+              <div class="sub">확정 세션 기준 VI/hour · 전체 작업자 합산</div>
+            </div>
+          </div>
+          <div id="brandProductivity" class="brandCompare"></div>
+        </section>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>Brand 성과 · 난이도</h2>
+              <div class="sub">난이도가 높은 Brand부터 표시합니다.</div>
+            </div>
+          </div>
+          <div class="brandDefinition" role="note">
+            <b>난이도 지수 100</b> = 동일 작업자 · Stage · REQ 규모 기준입니다. 값이 높을수록 상대적으로 어려우며, 비교 cohort 또는 비교 VI가 부족하면 <b>비교 불가</b>로 표시합니다.<br>
+            난이도와 생산성은 확정 세션 기반의 관찰 지표입니다. 품질, 상품 구성, 배정 방식의 차이를 모두 통제하지 않으므로 인과적 평가나 Brand 순위로 해석할 수 없습니다.
+          </div>
+          <div id="brandTable"></div>
+        </section>
+      </section>
+
+      <section class="tabPanel hidden" id="panel-nodes" role="tabpanel" aria-labelledby="tab-nodes">
+        <div class="pageIntro">
+          <h2>Node</h2>
+          <p>Node별 요청량과 처리 현황을 확인합니다.</p>
+        </div>
+
+        <div class="sectionLabel">Node 요약 <small>기간 요청과 현재 상태를 분리해 표시합니다.</small></div>
+        <div id="nodeSummary" class="nodeSummaryGrid"></div>
+
+        <div class="grid2">
+          <section class="panel">
+            <div class="head">
+              <div>
+                <h2>Node별 요청량</h2>
+                <div class="sub">일요일 시작 · Requested At 기준</div>
+              </div>
+            </div>
+            <div id="weekly"></div>
+          </section>
+          <section class="panel">
+            <div class="head">
+              <div>
+                <h2>Node별 리드타임</h2>
+                <div class="sub">완료 요청의 실제 요청 → 완료 경과시간</div>
+              </div>
+            </div>
+            <div id="lead"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="head">
+            <div>
+              <h2>Node별 현재 진행 현황</h2>
+              <div class="sub">미완료 요청 · 3P / 2P 별도 집계</div>
+            </div>
+          </div>
+          <div id="nodes"></div>
+        </section>
+
+      </section>
+
+      <div class="method" id="methodology">
+        생산성은 세션 종료 시 확정된 Completed VI Delta입니다. 3P와 2P를 합산한 생산성 점수는 사용하지 않습니다.
+        <details>
+          <summary>집계 기준과 데이터 한계</summary>
+          <p>날짜를 넘긴 세션은 종료일에 전량 귀속합니다. DROP 요청의 확정 작업량은 생산성에 유지하지만 요청 현황에서는 DROP을 제외합니다. 누락된 과거 값은 임의 보정하지 않으며 진행률과 리드타임은 기존 REQUESTS summary를 사용합니다.</p>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let DATA = null;
+    let MODE = 'daily';
+    let SERIES = 'all';
+    let BUSY = false;
+    let ALL = false;
+    let ACTIVE_TAB = 'overview';
+
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+    const finite = value => typeof value === 'number' ? Number.isFinite(value) : value !== '' && value != null && Number.isFinite(Number(value));
+    const numeric = value => finite(value) ? Number(value) : 0;
+    const num = value => finite(value) ? Number(value).toLocaleString('ko-KR') : '—';
+    const rate = value => finite(value) ? Number(value).toFixed(1) : '—';
+    const days = value => finite(value) ? (Number(value) / 24).toFixed(1) + '일' : '표본 없음';
+    const diff = value => finite(value) ? (Number(value) >= 0 ? '+' : '') + (Number(value) * 100).toFixed(0) + '%' : '—';
+    const pc = (done, total) => numeric(total) > 0 ? Math.max(0, Math.min(100, numeric(done) / numeric(total) * 100)) : null;
+    const hasOwn = (object, key) => object != null && Object.prototype.hasOwnProperty.call(object, key);
+    const textOrDash = value => value == null || String(value).trim() === '' ? '—' : String(value);
+
+    function optionsFor(id, values, selected, firstLabel) {
+      const select = $(id);
+      const clean = Array.from(new Set((values || []).filter(value => value != null && String(value).trim() !== '').map(String))).sort((a, b) => a.localeCompare(b, 'ko'));
+      select.innerHTML = '<option value="">' + esc(firstLabel) + '</option>' + clean.map(value => '<option value="' + esc(value) + '">' + esc(value) + '</option>').join('');
+      select.value = clean.includes(String(selected || '')) ? String(selected || '') : '';
+    }
+
+    function table(headers, rows, emptyText) {
+      return '<div class="tableScroll"><table class="detail"><thead><tr>' + headers.map((header, index) => '<th class="' + (index > 1 ? 'num' : '') + '">' + esc(header) + '</th>').join('') + '</tr></thead><tbody>' +
+        (rows.length ? rows.map(row => '<tr>' + row.map((cell, index) => '<td class="' + (index > 1 ? 'num' : '') + '">' + cell + '</td>').join('') + '</tr>').join('') : '<tr><td colspan="' + headers.length + '" class="empty">' + esc(emptyText || '선택 기간에 조건을 충족하는 확정 데이터가 없습니다') + '</td></tr>') +
+        '</tbody></table></div>';
+    }
+
+    function workerAnalytics() {
+      return DATA && DATA.analytics ? DATA.analytics : {};
+    }
+
+    function overallAnalytics() {
+      return DATA && (DATA.analyticsOverall || DATA.analytics) ? (DATA.analyticsOverall || DATA.analytics) : {};
+    }
+
+    function globalWarnings() {
+      return DATA && (DATA.globalWarnings || DATA.warnings) ? (DATA.globalWarnings || DATA.warnings) : {};
+    }
+
+    function periods() {
+      const grouped = Object.create(null);
+      (DATA.daily || []).forEach(row => {
+        const period = MODE === 'daily' ? row.day : String(row.day || '').slice(0, 7);
+        const key = period + '\n' + row.worker;
+        if (!grouped[key]) grouped[key] = { period: period, worker: row.worker, threeP: 0, twoP: 0 };
+        grouped[key].threeP += numeric(row.threeP);
+        grouped[key].twoP += numeric(row.twoP);
+      });
+      return Object.values(grouped);
+    }
+
+    function bar(label, value, max, className) {
+      const width = max > 0 ? Math.max(0, numeric(value)) / max * 100 : 0;
+      return '<div class="barline"><span class="stage ' + className + '">' + esc(label) + '</span><div class="track"><div class="fill ' + className + '" style="width:' + width + '%"></div></div><span class="barval ' + (numeric(value) < 0 ? 'negative' : '') + '">' + rate(value) + '</span></div>';
+    }
+
+    function renderWorkers() {
+      const rows = Array.isArray(workerAnalytics().workers) ? workerAnalytics().workers : [];
+      const max = Math.max(1, ...rows.flatMap(row => [numeric(row.threeP && row.threeP.rate), numeric(row.twoP && row.twoP.rate)]));
+      $('workers').innerHTML = rows.length ? rows.map(row => {
+        const three = row.threeP || {};
+        const two = row.twoP || {};
+        return '<div class="worker"><span class="workerName" title="' + esc(row.worker) + '">' + esc(row.worker) + '</span><div class="bars">' +
+          (SERIES !== 'twoP' ? bar('3P', three.rate, max, '') : '') +
+          (SERIES !== 'threeP' ? bar('2P', two.rate, max, 'two') : '') +
+          '</div></div>';
+      }).join('') : '<div class="empty">비교 가능한 확정 세션이 없습니다</div>';
+
+      $('workerDetail').innerHTML = table(
+        ['작업자', '완료 VI', '시간', '전체 VI/h', '3P VI/h', '3P vs median', '2P VI/h', '2P vs median', '작업 REQ', '평균 규모'],
+        rows.map(row => {
+          const three = row.threeP || {};
+          const two = row.twoP || {};
+          return [esc(row.worker), num(row.completedVI), rate(row.workHours), rate(row.viPerHour), rate(three.rate), diff(three.medianDiff), rate(two.rate), diff(two.medianDiff), num(row.requestCount), finite(row.averageRequestVI) ? num(Math.round(row.averageRequestVI)) : '—'];
+        })
+      );
+    }
+
+    function renderWorkerSummary() {
+      const analytics = workerAnalytics();
+      const team = analytics.team || {};
+      const stages = team.stages || {};
+      const three = stages.threeP || {};
+      const two = stages.twoP || {};
+      const selectedWorker = DATA.options && DATA.options.worker;
+      const title = selectedWorker ? esc(selectedWorker) : '팀 전체';
+      $('workerSummary').innerHTML =
+        metricCard(title + ' 완료 VI', num(team.vi), '확정 세션 기준') +
+        metricCard('작업시간', rate(team.hours), 'worker-hour') +
+        metricCard('3P 생산성', rate(three.rate), 'VI/hour') +
+        metricCard('2P 생산성', rate(two.rate), 'VI/hour') +
+        metricCard('생산성 편차', three.cv == null ? '—' : (numeric(three.cv) * 100).toFixed(0) + '%', '3P CV · 2P ' + (two.cv == null ? '—' : (numeric(two.cv) * 100).toFixed(0) + '%'));
+    }
+
+    function brandRows() {
+      const rows = overallAnalytics().brands;
+      return Array.isArray(rows) ? rows : [];
+    }
+
+    function brandName(row) {
+      const value = String(row && row.brand != null ? row.brand : '').trim();
+      return value || '미지정';
+    }
+
+    function brandStageRate(row, key) {
+      const stage = row && row[key];
+      return stage && finite(stage.rate) ? Number(stage.rate) : null;
+    }
+
+    function comparableDifficulty(row) {
+      return finite(row && row.difficultyIndex) && numeric(row.comparisonCohorts) > 0 && numeric(row.comparisonVI) > 0;
+    }
+
+    function renderBrandSummary() {
+      const rows = brandRows();
+      if (!rows.length) {
+        $('brandSummary').innerHTML = '<div class="empty">Brand 분석 데이터가 없습니다</div>';
+        return;
+      }
+      const completedVI = rows.reduce((sum, row) => sum + numeric(row.completedVI), 0);
+      const workerHours = rows.reduce((sum, row) => sum + numeric(row.workerHours), 0);
+      const pooledRate = workerHours > 0 ? completedVI / workerHours : null;
+      const comparable = rows.filter(comparableDifficulty).length;
+      $('brandSummary').innerHTML =
+        metricCard('분석 Brand', num(rows.length), '확정 세션 또는 완료 REQ') +
+        metricCard('완료 VI', num(completedVI), '확정 세션 순증분') +
+        metricCard('작업시간', rate(workerHours), 'worker-hour') +
+        metricCard('전체 생산성', rate(pooledRate), 'VI/hour') +
+        metricCard('난이도 비교 가능', num(comparable) + ' / ' + num(rows.length), '동일 작업자 · Stage · 규모');
+    }
+
+    function renderBrandProductivity() {
+      const rows = brandRows().filter(row => finite(row.viPerWorkerHour) || finite(brandStageRate(row, 'threeP')) || finite(brandStageRate(row, 'twoP'))).sort((a, b) => {
+        const rateOrder = numeric(b.viPerWorkerHour) - numeric(a.viPerWorkerHour);
+        return rateOrder || brandName(a).localeCompare(brandName(b), 'ko');
+      });
+      const max = Math.max(1, ...rows.flatMap(row => [numeric(brandStageRate(row, 'threeP')), numeric(brandStageRate(row, 'twoP'))]));
+      $('brandProductivity').innerHTML = rows.length ? rows.map(row => {
+        const name = brandName(row);
+        return '<article class="brandCompareRow"><div class="brandCompareTop"><span class="brandName" title="' + esc(name) + '">' + esc(name) + '</span>' +
+          '<span class="brandOverall">전체 ' + rate(row.viPerWorkerHour) + ' VI/h · 완료 VI ' + num(row.completedVI) + '</span></div><div class="bars">' +
+          bar('3P', brandStageRate(row, 'threeP'), max, '') + bar('2P', brandStageRate(row, 'twoP'), max, 'two') + '</div></article>';
+      }).join('') : '<div class="empty">브랜드별 생산성 표본이 없습니다</div>';
+    }
+
+    function renderBrandTable() {
+      const rows = brandRows().slice().sort((a, b) => {
+        const aComparable = comparableDifficulty(a);
+        const bComparable = comparableDifficulty(b);
+        if (aComparable !== bComparable) return aComparable ? -1 : 1;
+        if (aComparable && numeric(a.difficultyIndex) !== numeric(b.difficultyIndex)) return numeric(b.difficultyIndex) - numeric(a.difficultyIndex);
+        return brandName(a).localeCompare(brandName(b), 'ko');
+      });
+      $('brandTable').innerHTML = table(
+        ['Brand', '난이도', '전체 VI/h', '3P VI/h', '2P VI/h', '리드타임', '완료 VI', 'REQ', '완료 REQ', '세션', '작업자', 'Worker-h', '비교 cohort · VI'],
+        rows.map(row => [
+          esc(brandName(row)),
+          comparableDifficulty(row) ? rate(row.difficultyIndex) : '비교 불가',
+          rate(row.viPerWorkerHour),
+          rate(brandStageRate(row, 'threeP')),
+          rate(brandStageRate(row, 'twoP')),
+          days(row.medianLeadHours),
+          num(row.completedVI),
+          num(row.requestCount),
+          num(row.completedRequestCount),
+          num(row.sessionCount),
+          num(row.workerCount),
+          rate(row.workerHours),
+          num(row.comparisonCohorts) + ' cohort · ' + num(row.comparisonVI) + ' VI'
+        ]),
+        'Brand 분석 데이터가 없습니다'
+      );
+    }
+
+    function renderBrands() {
+      renderBrandSummary();
+      renderBrandProductivity();
+      renderBrandTable();
+    }
+
+    function renderTrend() {
+      const rows = periods();
+      const periodsList = Array.from(new Set(rows.map(row => row.period))).sort();
+      const sums = Object.create(null);
+      periodsList.forEach(period => { sums[period] = { threeP: 0, twoP: 0 }; });
+      rows.forEach(row => {
+        sums[row.period].threeP += numeric(row.threeP);
+        sums[row.period].twoP += numeric(row.twoP);
+      });
+      $('trendTitle').textContent = (MODE === 'daily' ? 'Daily' : 'Monthly') + ' 생산성 추이';
+      $('productivity').innerHTML = table(
+        [MODE === 'daily' ? '날짜' : '월', '작업자', '3P VI', '2P VI'],
+        rows.slice().sort((a, b) => String(b.period).localeCompare(String(a.period))).map(row => [esc(row.period), esc(row.worker), num(row.threeP), num(row.twoP)])
+      );
+
+      if (!periodsList.length) {
+        $('trend').innerHTML = '<div class="empty">추이를 표시할 데이터가 없습니다</div>';
+        return;
+      }
+      const width = Math.max(720, periodsList.length * 50);
+      const height = 215;
+      const pad = { l: 36, r: 15, t: 10, b: 29 };
+      const max = Math.max(1, ...periodsList.flatMap(period => [Math.max(0, sums[period].threeP), Math.max(0, sums[period].twoP)]));
+      const x = index => pad.l + (width - pad.l - pad.r) * (periodsList.length === 1 ? .5 : index / (periodsList.length - 1));
+      const y = value => height - pad.b - (height - pad.t - pad.b) * Math.max(0, value) / max;
+      const path = key => periodsList.map((period, index) => (index ? 'L' : 'M') + x(index) + ' ' + y(sums[period][key])).join(' ');
+      let svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" style="min-width:' + width + 'px" role="img" aria-label="3P와 2P 생산성 추이">';
+      [0, .25, .5, .75, 1].forEach(tick => {
+        const yy = y(max * tick);
+        svg += '<line class="grid" x1="' + pad.l + '" x2="' + (width - pad.r) + '" y1="' + yy + '" y2="' + yy + '"/><text class="axis" x="' + (pad.l - 6) + '" y="' + (yy + 3) + '" text-anchor="end">' + num(Math.round(max * tick)) + '</text>';
+      });
+      periodsList.forEach((period, index) => {
+        if (periodsList.length < 15 || index % Math.ceil(periodsList.length / 12) === 0) {
+          svg += '<text class="axis" x="' + x(index) + '" y="' + (height - 7) + '" text-anchor="middle">' + esc(MODE === 'daily' ? period.slice(5) : period) + '</text>';
+        }
+      });
+      ['threeP', 'twoP'].forEach((key, index) => {
+        svg += '<path class="' + (index ? 'p2' : 'p3') + '" d="' + path(key) + '"/>';
+        periodsList.forEach((period, pointIndex) => {
+          svg += '<circle class="' + (index ? 'd2' : 'd3') + '" cx="' + x(pointIndex) + '" cy="' + y(sums[period][key]) + '" r="2.5"><title>' + esc(period) + ' · ' + (index ? '2P ' : '3P ') + num(sums[period][key]) + '</title></circle>';
+        });
+      });
+      $('trend').innerHTML = svg + '</svg>';
+    }
+
+    function renderWeekly() {
+      const rows = Array.isArray(DATA.weekly) ? DATA.weekly : [];
+      const weeks = Array.from(new Set(rows.map(row => row.week))).sort();
+      const nodes = Array.from(new Set(rows.map(row => row.node))).sort();
+      const values = Object.create(null);
+      rows.forEach(row => { values[row.node + '\n' + row.week] = numeric(row.count); });
+      if (!weeks.length) {
+        $('weekly').innerHTML = '<div class="empty">이번 기간에는 요청이 없습니다</div>';
+        return;
+      }
+      const max = Math.max(1, ...rows.map(row => numeric(row.count)));
+      $('weekly').innerHTML = '<div class="tableScroll"><table class="heat"><thead><tr><th>Node</th>' + weeks.map(week => '<th>' + esc(String(week).slice(5)) + '</th>').join('') + '</tr></thead><tbody>' +
+        nodes.map(node => '<tr><td title="' + esc(node) + '">' + esc(node) + '</td>' + weeks.map(week => {
+          const value = values[node + '\n' + week] || 0;
+          const alpha = .07 + .67 * value / max;
+          return '<td style="background:rgba(70,115,209,' + alpha + ');color:' + (alpha > .4 ? 'white' : '#355792') + '">' + num(value) + '</td>';
+        }).join('') + '</tr>').join('') + '</tbody></table></div>';
+    }
+
+    function renderLead() {
+      const rows = (DATA.nodeRows || []).filter(row => row.lead && row.lead.count).sort((a, b) => numeric(b.lead.median) - numeric(a.lead.median));
+      const max = Math.max(1, ...rows.map(row => numeric(row.lead.median)));
+      const lead = (DATA.kpi && DATA.kpi.lead) || {};
+      $('lead').innerHTML = '<div class="leadSummary"><div><span class="hint">Median</span><strong>' + days(lead.median) + '</strong></div><div><span class="hint">Average</span><strong>' + days(lead.average) + '</strong></div></div>' +
+        (rows.length ? '<div class="leadlist">' + rows.map(row => '<div class="leadrow"><span class="leadname" title="' + esc(row.node) + '">' + esc(row.node) + '</span><div class="leadtrack"><div class="leadfill" style="width:' + numeric(row.lead.median) / max * 100 + '%"></div></div><span class="leadvalue">' + days(row.lead.median) + '</span><span class="n">n=' + num(row.lead.count) + '</span></div>').join('') + '</div>' : '<div class="empty">완료된 요청 표본이 없습니다</div>');
+    }
+
+    function stageProgress(label, done, total, className) {
+      const percent = pc(done, total);
+      if (percent == null) {
+        return '<div class="stageRow"><span class="stage ' + className + '">' + esc(label) + '</span><div class="emptyInline">진행률 표본 없음</div></div>';
+      }
+      return '<div class="stageRow"><span class="stage ' + className + '">' + esc(label) + '</span><div><div class="progressMeta"><span>' + num(done) + ' / ' + num(total) + '</span><b>' + percent.toFixed(percent > 0 && percent < 1 ? 1 : 0) + '%</b></div><div class="progress ' + className + '"><i style="width:' + percent + '%"></i></div></div></div>';
+    }
+
+    function renderNodes() {
+      const rows = (DATA.nodeRows || []).filter(row => numeric(row.open) > 0);
+      $('nodes').innerHTML = rows.length ? rows.map(row => {
+        const stages = [];
+        if (numeric(row.total3) > 0) stages.push(stageProgress('3P', row.done3, row.total3, ''));
+        if (numeric(row.total2) > 0) stages.push(stageProgress('2P', row.done2, row.total2, 'two'));
+        return '<div class="node"><div class="nodeTop"><span class="nodeName">' + esc(row.node) + '</span><span class="nodeStats">미완료 ' + num(row.open) + (numeric(row.blocked) ? '<span class="blocked">ON HOLD ' + num(row.blocked) + '</span>' : '') + '</span></div><div class="stages">' + (stages.length ? stages.join('') : '<div class="emptyInline">진행률을 계산할 VI 데이터가 없습니다</div>') + '</div></div>';
+      }).join('') : '<div class="empty">현재 미완료 요청이 없습니다</div>';
+    }
+
+    function nodeCompletion(row) {
+      if (hasOwn(row, 'currentTotal') && numeric(row.currentTotal) > 0) return pc(row.currentDone, row.currentTotal);
+      const total = numeric(row.total3) + numeric(row.total2);
+      return total > 0 ? pc(numeric(row.done3) + numeric(row.done2), total) : null;
+    }
+
+    function fact(label, value) {
+      return '<span>' + esc(label) + '<b>' + num(value) + '</b></span>';
+    }
+
+    function renderOverviewNodes() {
+      const rows = (DATA.nodeRows || []).filter(row => numeric(row.open) > 0 || numeric(row.received) > 0);
+      $('overviewNodes').innerHTML = rows.length ? rows.map(row => {
+        const completion = nodeCompletion(row);
+        const facts = [fact('현재 요청', row.open)];
+        if (hasOwn(row, 'inProgress')) facts.push(fact('ONGOING', row.inProgress));
+        if (hasOwn(row, 'waiting')) facts.push(fact('TO DO', row.waiting));
+        if (hasOwn(row, 'unassigned')) facts.push(fact('분배 필요', row.unassigned));
+        if (numeric(row.blocked)) facts.push(fact('ON HOLD', row.blocked));
+        return '<article class="nodeCard"><div class="nodeTop"><span class="nodeName">' + esc(row.node) + '</span><span class="nodeStats">기간 요청 ' + num(row.received) + '</span></div>' +
+          (completion == null ? '<div class="emptyInline">현재 진행률 표본 없음</div>' : '<div class="progressMeta"><span>현재 완료율</span><b>' + completion.toFixed(completion > 0 && completion < 1 ? 1 : 0) + '%</b></div><div class="progress"><i style="width:' + completion + '%"></i></div>') +
+          '<div class="nodeFacts">' + facts.join('') + '</div></article>';
+      }).join('') : '<div class="empty">표시할 Node 요청이 없습니다</div>';
+    }
+
+    function renderNodeSummary() {
+      const analyticsByNode = Object.create(null);
+      const rowsFromAnalytics = Array.isArray(overallAnalytics().nodes) ? overallAnalytics().nodes : [];
+      rowsFromAnalytics.forEach(row => { analyticsByNode[String(row.node)] = row; });
+      const rows = DATA.nodeRows || [];
+      $('nodeSummary').innerHTML = rows.length ? rows.map(row => {
+        const completion = nodeCompletion(row);
+        const analytics = analyticsByNode[String(row.node)] || {};
+        const facts = [fact('기간 요청', row.received)];
+        if (hasOwn(row, 'periodCompleted')) facts.push(fact('기간 완료', row.periodCompleted));
+        facts.push(fact('현재 요청', row.open));
+        if (hasOwn(row, 'inProgress')) facts.push(fact('ONGOING', row.inProgress));
+        if (hasOwn(row, 'waiting')) facts.push(fact('TO DO', row.waiting));
+        if (hasOwn(row, 'unassigned')) facts.push(fact('분배 필요', row.unassigned));
+        if (numeric(row.blocked)) facts.push(fact('ON HOLD', row.blocked));
+        if (finite(analytics.rate)) facts.push('<span>생산성<b>' + rate(analytics.rate) + ' VI/h</b></span>');
+        return '<article class="nodeCard"><div class="nodeTop"><span class="nodeName">' + esc(row.node) + '</span><span class="nodeStats">' + (completion == null ? '완료율 표본 없음' : completion.toFixed(completion > 0 && completion < 1 ? 1 : 0) + '%') + '</span></div>' +
+          (completion == null ? '' : '<div class="progress"><i style="width:' + completion + '%"></i></div>') + '<div class="nodeFacts">' + facts.join('') + '</div></article>';
+      }).join('') : '<div class="empty">선택 조건에 해당하는 Node 데이터가 없습니다</div>';
+    }
+
+    function renderBacklog() {
+      const backlog = Array.isArray(DATA.backlog) ? DATA.backlog : [];
+      const rows = ALL ? backlog : backlog.slice(0, 7);
+      $('backlog').innerHTML = '<div class="backlogRow header"><span>Request</span><span>Node</span><span>브랜드</span><span>상태</span><span>경과일</span></div>' +
+        (rows.length ? rows.map(row => '<div class="backlogRow"><span class="req">' + esc(row.id) + '</span><span>' + esc(row.node) + '</span><span>' + esc(row.brand) + '</span><span>' + esc(row.status) + '</span><span class="age ' + (numeric(row.age) >= 7 ? 'old' : '') + '">' + (finite(row.age) ? num(row.age) + '일' : '—') + '</span></div>').join('') : '<div class="empty">현재 대기 중인 요청이 없습니다</div>');
+      $('more').classList.toggle('hidden', backlog.length <= 7);
+      $('more').textContent = ALL ? '접기' : '전체 ' + backlog.length + '건 보기';
+    }
+
+    function notice() {
+      const warnings = globalWarnings();
+      const main = [];
+      const detail = [];
+      const analytics = overallAnalytics();
+      const unknown = analytics.barcodeProductivity && analytics.barcodeProductivity.unknownExcluded;
+      if (DATA.options && DATA.options.sessionReady === false) main.push('WORK_SESSIONS 생산성 스키마를 확인하세요');
+      if (DATA.options && DATA.options.barcodeProvidedReady === false) main.push('Barcode Provided 컬럼을 확인하세요');
+      if (numeric(warnings.activeSessions)) main.push(num(warnings.activeSessions) + '개 ACTIVE 세션의 생산량은 아직 미확정입니다');
+      if (numeric(warnings.unknownDelta)) detail.push('수량/작업자 누락 ' + num(warnings.unknownDelta) + '건 제외');
+      if (numeric(warnings.orphanSessions)) detail.push('요청 연결 누락 ' + num(warnings.orphanSessions) + '건');
+      if (numeric(warnings.missingRequestDate)) detail.push('요청일 누락 ' + num(warnings.missingRequestDate) + '건');
+      if (numeric(warnings.missingLead)) detail.push('완료일/리드타임 누락 ' + num(warnings.missingLead) + '건');
+      if (unknown && numeric(unknown.sessionCount)) detail.push('바코드 제공 여부 UNKNOWN 2P 세션 ' + num(unknown.sessionCount) + '건 제외');
+      if (numeric(warnings.activeSessions)) detail.unshift('세션 종료 시 Dashboard에 반영됩니다.');
+      $('notice').classList.toggle('hidden', !main.length && !detail.length);
+      $('noticeMain').textContent = main.join(' · ') || '일부 집계 기준을 확인하세요';
+      $('noticeDetail').textContent = detail.join(' · ');
+    }
+
+    function metricCard(label, value, foot, className) {
+      return '<div class="metric compact ' + (className || '') + '"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value) + '</div><div class="metricFoot">' + esc(foot || '') + '</div></div>';
+    }
+
+    function sumNodeField(field) {
+      const rows = DATA.nodeRows || [];
+      return rows.some(row => hasOwn(row, field)) ? rows.reduce((sum, row) => sum + numeric(row[field]), 0) : null;
+    }
+
+    function renderSummaryMetrics() {
+      const kpi = DATA.kpi || {};
+      const lead = kpi.lead || {};
+      $('metrics').innerHTML =
+        metricCard('요청', num(kpi.received), '선택 기간 내 접수') +
+        metricCard('완료', num(kpi.completed), '선택 기간 내 완료') +
+        metricCard('리드타임 중앙값', days(lead.median), '평균 ' + days(lead.average) + ' · n=' + num(lead.count));
+
+      let current = metricCard('미완료 요청', num(kpi.open), '현재 전체');
+      const inProgress = sumNodeField('inProgress');
+      const waiting = sumNodeField('waiting');
+      const unassigned = sumNodeField('unassigned');
+      const currentInProgress = hasOwn(kpi, 'inProgress') ? kpi.inProgress : inProgress;
+      const currentWaiting = hasOwn(kpi, 'waiting') ? kpi.waiting : waiting;
+      const currentUnassigned = hasOwn(kpi, 'unassigned') ? kpi.unassigned : unassigned;
+      if (currentInProgress != null) current += metricCard('ONGOING', num(currentInProgress), '현재 상태');
+      if (currentWaiting != null) current += metricCard('TO DO', num(currentWaiting), '현재 상태');
+      if (currentUnassigned != null) current += metricCard('분배 필요', num(currentUnassigned), '현재 상태');
+      current += metricCard('ON HOLD', num(kpi.blocked), '현재 요청', 'block');
+      $('currentMetrics').innerHTML = current;
+    }
+
+    function groupTable(title, rows) {
+      return '<div class="label" style="margin:14px 0 6px">' + esc(title) + '</div>' + table(
+        ['그룹', 'REQ', 'Median Lead', 'VI/worker-h'],
+        (rows || []).map(row => [esc(row.group), num(row.count), days(row.medianLead), rate(row.viPerWorkerHour)])
+      );
+    }
+
+    function renderBarcodeProductivity() {
+      const analytics = workerAnalytics();
+      const barcode = analytics.barcodeProductivity || { groups: [], difference: {}, unknownExcluded: {} };
+      const emptyGroup = key => ({ key: key, rate: null, vi: 0, hours: 0, requestCount: 0, sessionCount: 0 });
+      const yes = (barcode.groups || []).find(row => row.key === 'YES') || emptyGroup('YES');
+      const no = (barcode.groups || []).find(row => row.key === 'NO') || emptyGroup('NO');
+      const difference = barcode.difference || {};
+      const unknown = barcode.unknownExcluded || {};
+      const definitions = analytics.definitions || {};
+      const card = row => '<div class="metric"><div class="label">' + (row.key === 'YES' ? '바코드 제공' : '바코드 미제공') + '</div><div class="value">' + rate(row.rate) + ' <small>VI/h</small></div><div class="metricFoot"><span>VI <b>' + num(row.vi) + '</b></span><span>' + rate(row.hours) + ' worker-h</span><span>REQ ' + num(row.requestCount) + ' · 세션 ' + num(row.sessionCount) + '</span></div></div>';
+      const absolute = finite(difference.absoluteViPerHour) ? (numeric(difference.absoluteViPerHour) >= 0 ? '+' : '') + rate(difference.absoluteViPerHour) : '—';
+      $('barcodeProductivity').innerHTML = '<div class="barcodeCards">' + card(yes) + card(no) + '<div class="metric"><div class="label">제공 − 미제공</div><div class="value">' + absolute + ' <small>VI/h</small></div><div class="metricFoot">상대 차이 <b>' + diff(difference.relative) + '</b></div></div></div>' +
+        '<div class="hint barcodeNote">UNKNOWN 제외: REQ ' + num(unknown.requestCount) + '건 · 세션 ' + num(unknown.sessionCount) + '건 · ' + esc(definitions.barcodeCausalWarning || '') + '</div><details class="data"><summary>집계 상세</summary>' +
+        table(['구분', '2P VI/h', '완료 VI', 'Worker-h', 'REQ', '세션'], [yes, no].map(row => [row.key === 'YES' ? '제공' : '미제공', rate(row.rate), num(row.vi), rate(row.hours), num(row.requestCount), num(row.sessionCount)])) + '</details>';
+    }
+
+    function renderReqEfficiency() {
+      const analytics = workerAnalytics();
+      const definitions = analytics.definitions || {};
+      const requests = Array.isArray(analytics.requests) ? analytics.requests : [];
+      $('reqEfficiency').innerHTML = '<div class="hint">' + esc(definitions.causalWarning || '') + '</div>' +
+        groupTable('작업자 수별', analytics.byWorkerCount || []) +
+        groupTable('VI 규모별', analytics.bySize || []) +
+        table(
+          ['REQ', 'VI', '유형', '작업자', 'Lead', 'Worker-h', 'VI/worker-h'],
+          requests.filter(row => row.workerHours !== null && row.workerHours !== undefined).sort((a, b) => (finite(a.viPerWorkerHour) ? numeric(a.viPerWorkerHour) : Infinity) - (finite(b.viPerWorkerHour) ? numeric(b.viPerWorkerHour) : Infinity)).slice(0, 12).map(row => [esc(row.id), num(row.totalVI), esc(row.type), num(row.workerCount), days(row.leadHours), rate(row.workerHours), rate(row.viPerWorkerHour)])
+        );
+    }
+
+    function renderBenchmark() {
+      const rows = (workerAnalytics().benchmarks || []).filter(row => numeric(row.sampleWorkers) >= 2).sort((a, b) => Math.abs(numeric(b.diff)) - Math.abs(numeric(a.diff))).slice(0, 15);
+      $('benchmark').innerHTML = rows.length ? table(
+        ['작업자', 'Stage', '브랜드', '규모', 'VI/h', 'Median', '차이'],
+        rows.map(row => [esc(row.worker), esc(row.stage), esc(row.brand), esc(row.bucket), rate(row.rate), rate(row.median), diff(row.diff)])
+      ) : '<div class="empty">동일 조건에서 비교할 표본이 부족합니다</div>';
+    }
+
+    function render() {
+      const options = DATA.options || {};
+      $('content').classList.remove('hidden');
+      $('status').classList.add('hidden');
+      $('from').value = options.from || '';
+      $('to').value = options.to || '';
+      optionsFor('node', DATA.nodes || [], options.node, '전체');
+      optionsFor('worker', DATA.workers || [], options.worker, '전체');
+      $('meta').textContent = '마지막 조회 ' + textOrDash(options.updatedAt) + ' · ' + textOrDash(options.timezone);
+
+      notice();
+      renderSummaryMetrics();
+      renderOverviewNodes();
+      ALL = false;
+      renderBacklog();
+
+      renderWorkerSummary();
+      renderWorkers();
+      renderTrend();
+      renderBarcodeProductivity();
+      renderReqEfficiency();
+      renderBenchmark();
+
+      renderBrands();
+
+      renderNodeSummary();
+      renderWeekly();
+      renderLead();
+      renderNodes();
+
+      syncFilterVisibility();
+    }
+
+    function dashboardAccessFailure(value) {
+      return /Dashboard (?:접근 권한|최초 인증)|Google 계정 이메일/.test(String(value || ''));
+    }
+
+    function load(first) {
+      if (BUSY) return;
+      BUSY = true;
+      $('query').disabled = true;
+      $('query').textContent = '조회 중';
+      $('error').classList.add('hidden');
+      const payload = first ? {} : {
+        from: $('from').value,
+        to: $('to').value,
+        node: $('node').value,
+        worker: $('worker').value
+      };
+      google.script.run
+        .withSuccessHandler(result => {
+          BUSY = false;
+          $('query').disabled = false;
+          $('query').textContent = '조회';
+          DATA = result;
+          render();
+        })
+        .withFailureHandler(error => {
+          BUSY = false;
+          $('query').disabled = false;
+          $('query').textContent = '다시 조회';
+          const message = error && error.message ? error.message : String(error);
+          if (dashboardAccessFailure(message)) {
+            DATA = null;
+            $('content').classList.add('hidden');
+            $('status').classList.remove('hidden');
+            $('status').textContent = 'Dashboard 접근 권한이 없습니다.';
+          }
+          $('error').textContent = (DATA ? '기존 결과를 유지합니다. ' : '') + message;
+          $('error').classList.remove('hidden');
+        })
+        .getOperationsDashboard(payload);
+    }
+
+    function syncFilterVisibility() {
+      $('workerTools').classList.toggle('hidden', ACTIVE_TAB !== 'workers');
+    }
+
+    function activateTab(name, focusTab) {
+      const target = $('tab-' + name);
+      if (!target) return;
+      ACTIVE_TAB = name;
+      document.querySelectorAll('[role="tab"]').forEach(tab => {
+        const selected = tab === target;
+        tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      document.querySelectorAll('.tabPanel').forEach(panel => panel.classList.toggle('hidden', panel.id !== 'panel-' + name));
+      syncFilterVisibility();
+      if (focusTab) target.focus();
+    }
+
+    $('filters').addEventListener('submit', event => {
+      event.preventDefault();
+      load(false);
+    });
+    $('refreshTop').addEventListener('click', () => load(false));
+    $('close').addEventListener('click', () => google.script.host.close());
+    $('more').addEventListener('click', () => {
+      ALL = !ALL;
+      renderBacklog();
+    });
+
+    document.querySelectorAll('[role="tab"]').forEach(tab => {
+      tab.addEventListener('click', () => activateTab(tab.dataset.tab, false));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+        let index = tabs.indexOf(tab);
+        if (event.key === 'ArrowLeft') index = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
+        if (event.key === 'Home') index = 0;
+        if (event.key === 'End') index = tabs.length - 1;
+        activateTab(tabs[index].dataset.tab, true);
+      });
+    });
+
+    ['daily', 'monthly'].forEach(mode => {
+      $(mode).addEventListener('click', () => {
+        MODE = mode;
+        $(mode).setAttribute('aria-pressed', 'true');
+        $(mode === 'daily' ? 'monthly' : 'daily').setAttribute('aria-pressed', 'false');
+        if (DATA) renderTrend();
+      });
+    });
+
+    document.querySelectorAll('[data-series]').forEach(button => {
+      button.addEventListener('click', () => {
+        SERIES = button.dataset.series;
+        document.querySelectorAll('[data-series]').forEach(item => item.classList.toggle('on', item === button));
+        if (DATA) renderWorkers();
+      });
+    });
+
+    syncFilterVisibility();
+    load(true);
+  </script>
+</body>
+</html>

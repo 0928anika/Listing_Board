@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --blue: #3568d4;
+      --blue-dark: #244fa8;
+      --green: #087d69;
+      --red: #c43d47;
+      --amber: #9a6711;
+      --purple: #6b4ab0;
+      --ink: #172033;
+      --text: #4b5668;
+      --muted: #7a8597;
+      --line: #e3e8f0;
+      --soft-line: #edf1f6;
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --shadow: 0 10px 30px rgba(30, 48, 80, .07);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.5 Arial, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .adminSummary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 9px 12px;
+      color: #657087;
+      background: #edf3ff;
+      border: 1px solid #dbe6fa;
+      border-radius: 11px;
+      font-size: 11px;
+    }
+
+    .adminLabel {
+      flex: 0 0 auto;
+      color: var(--blue-dark);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .adminEmail {
+      min-width: 0;
+      word-break: break-all;
+    }
+
+    .srOnly {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    main { padding: 20px 24px 28px; }
+
+    .panel {
+      margin-bottom: 16px;
+      padding: 19px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .sectionHead {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .sectionHead h2 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .sectionHead p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .accountCount {
+      flex: 0 0 auto;
+      min-width: 54px;
+      padding: 5px 9px;
+      color: var(--blue-dark);
+      background: #edf3ff;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .grantForm {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) 130px auto;
+      align-items: end;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .fieldLabel {
+      color: #657087;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    input, select {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #cfd7e4;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    input::placeholder { color: #9aa4b4; }
+
+    input:focus, select:focus {
+      border-color: #7396df;
+      box-shadow: 0 0 0 3px rgba(53, 104, 212, .11);
+    }
+
+    button {
+      height: 34px;
+      padding: 0 11px;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: #f7f9fc;
+      border-color: #cbd4e2;
+      box-shadow: 0 3px 10px rgba(30, 48, 80, .07);
+    }
+
+    button:active:not(:disabled) { transform: translateY(1px); }
+
+    button:focus-visible {
+      outline: 3px solid rgba(53, 104, 212, .2);
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      height: 40px;
+      padding: 0 18px;
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+      box-shadow: 0 5px 12px rgba(53, 104, 212, .2);
+    }
+
+    button.primary:hover:not(:disabled) {
+      color: #fff;
+      background: #2f5fc3;
+      border-color: #2f5fc3;
+    }
+
+    button.promote { color: var(--blue-dark); border-color: #bdcdf0; }
+    button.demote { color: var(--amber); border-color: #e7d2a5; }
+    button.danger { color: var(--red); border-color: #efc2c7; }
+    button.restore { color: var(--green); border-color: #acd9d0; }
+    button:disabled { cursor: wait; opacity: .5; box-shadow: none; }
+
+    .message {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      color: var(--red);
+      background: #fff4f4;
+      border: 1px solid #f4d1d4;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .message.ok {
+      color: var(--green);
+      background: #effaf7;
+      border-color: #c9e9e1;
+    }
+
+    .message:empty { display: none; }
+
+    .tableWrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 13px 10px;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--soft-line);
+    }
+
+    th {
+      color: #748096;
+      background: #f8faff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    th:first-child { border-radius: 11px 0 0 0; }
+    th:last-child { border-radius: 0 11px 0 0; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: #fbfcfe; }
+
+    th:nth-child(1), td:nth-child(1) { width: 27%; }
+    th:nth-child(2), td:nth-child(2) { width: 13%; }
+    th:nth-child(3), td:nth-child(3) { width: 12%; }
+    th:nth-child(4), td:nth-child(4) { width: 27%; }
+    th:nth-child(5), td:nth-child(5) { width: 21%; }
+
+    td.email {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 26px;
+      padding: 4px 9px;
+      color: var(--green);
+      background: #e9f6f2;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .badge::before {
+      width: 5px;
+      height: 5px;
+      flex: 0 0 5px;
+      background: currentColor;
+      border-radius: 50%;
+      content: '';
+      opacity: .8;
+    }
+
+    .badge.viewer { color: var(--blue-dark); background: #edf3ff; }
+    .badge.admin { color: var(--purple); background: #f3effd; }
+    .badge.primary { color: #204c9c; background: #e9f0ff; }
+    .badge.active { color: var(--green); background: #e9f6f2; }
+    .badge.revoked { color: var(--red); background: #fff0f1; }
+
+    .meta {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .metaTime, .metaActor { display: block; }
+    .metaActor { margin-top: 2px; color: #657087; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .actions button { height: 32px; padding: 0 9px; }
+    .locked { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .empty { padding: 32px; color: var(--muted); text-align: center; }
+
+    @media (max-width: 720px) {
+      main { padding: 16px; }
+      .panel { padding: 16px; border-radius: 14px; }
+      .grantForm { grid-template-columns: minmax(0, 1fr) 120px; }
+      .grantForm .primary { grid-column: 1 / -1; }
+      .tableWrap { overflow: visible; border: 0; border-radius: 0; }
+      table { min-width: 0; }
+      thead { display: none; }
+      tbody { display: grid; gap: 10px; }
+      tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 12px;
+        padding: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      tbody tr:hover td { background: transparent; }
+      tbody td {
+        display: block;
+        width: auto !important;
+        padding: 0;
+        border: 0;
+      }
+      tbody td.email,
+      tbody td.meta,
+      tbody td.actionCell { grid-column: 1 / -1; }
+      .actions { padding-top: 2px; }
+    }
+
+    @media (max-width: 460px) {
+      .grantForm { grid-template-columns: 1fr; }
+      .grantForm .primary { grid-column: auto; }
+      .sectionHead { align-items: center; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="srOnly">권한 관리</h1>
+    <div class="adminSummary">
+      <span class="adminLabel">기본 관리자</span>
+      <span id="admin" class="adminEmail">확인 중...</span>
+    </div>
+    <div id="message" class="message" role="alert" aria-live="polite"></div>
+
+    <section class="panel">
+      <div class="sectionHead">
+        <div>
+          <h2>이메일 승인</h2>
+          <p>대시보드에 접근할 계정과 역할을 선택하세요.</p>
+        </div>
+      </div>
+      <form id="grantForm" class="grantForm">
+        <label class="field">
+          <span class="fieldLabel">이메일</span>
+          <input id="email" type="email" maxlength="254" autocomplete="email" placeholder="name@coupang.com" aria-label="승인할 이메일" required>
+        </label>
+        <label class="field">
+          <span class="fieldLabel">역할</span>
+          <select id="role" aria-label="승인 역할">
+            <option value="VIEWER">조회자</option>
+            <option value="ADMIN">관리자</option>
+          </select>
+        </label>
+        <button class="primary" type="submit">승인</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="sectionHead">
+        <div>
+          <h2>승인 계정</h2>
+          <p>계정별 역할과 현재 권한 상태를 관리합니다.</p>
+        </div>
+        <span id="accountCount" class="accountCount">확인 중</span>
+      </div>
+      <div id="users" class="tableWrap"><div class="empty">불러오는 중...</div></div>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const message = $('message');
+    let BUSY = false;
+    let PRIMARY_ADMIN = '';
+    let CAN_TRANSFER_PRIMARY = false;
+
+    function errorText(error) {
+      return error && error.message ? error.message : String(error || '알 수 없는 오류가 발생했습니다.');
+    }
+
+    function notify(text, ok) {
+      message.className = 'message' + (ok ? ' ok' : '');
+      message.textContent = text || '';
+    }
+
+    function setControlsDisabled(disabled) {
+      document.querySelectorAll('button,select,input').forEach(control => {
+        control.disabled = disabled;
+      });
+    }
+
+    function rpc(name, args, onSuccess) {
+      if (BUSY) return;
+      BUSY = true;
+      setControlsDisabled(true);
+      const runner = google.script.run
+        .withSuccessHandler(function(result) {
+          BUSY = false;
+          setControlsDisabled(false);
+          if (onSuccess) onSuccess(result);
+        })
+        .withFailureHandler(function(error) {
+          BUSY = false;
+          setControlsDisabled(false);
+          notify(errorText(error), false);
+        });
+      runner[name].apply(runner, args || []);
+    }
+
+    function addBadge(cell, text, className) {
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + className;
+      badge.textContent = text;
+      cell.appendChild(badge);
+    }
+
+    function addAction(cell, label, className, action, email) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = className;
+      button.textContent = label;
+      button.dataset.action = action;
+      button.dataset.email = email;
+      cell.appendChild(button);
+    }
+
+    function addMeta(cell, at, by) {
+      const time = document.createElement('span');
+      const actor = document.createElement('span');
+      time.className = 'metaTime';
+      actor.className = 'metaActor';
+      time.textContent = at || '-';
+      actor.textContent = by || '';
+      cell.appendChild(time);
+      if (actor.textContent) cell.appendChild(actor);
+    }
+
+    function render(data) {
+      data = data || {};
+      PRIMARY_ADMIN = String(data.primaryAdminEmail || data.adminEmail || '').toLowerCase();
+      CAN_TRANSFER_PRIMARY = data.canTransferPrimary === true;
+      $('admin').textContent = PRIMARY_ADMIN
+        ? PRIMARY_ADMIN
+        : '기본 관리자 정보를 확인할 수 없습니다.';
+
+      const wrap = $('users');
+      const users = Array.isArray(data.users) ? data.users : [];
+      $('accountCount').textContent = users.length + '개 계정';
+      wrap.className = 'tableWrap';
+      wrap.textContent = '';
+
+      if (!users.length) {
+        wrap.className = 'tableWrap empty';
+        wrap.textContent = '승인 기록이 없습니다.';
+        return;
+      }
+
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+      const head = document.createElement('tr');
+      table.setAttribute('aria-label', '승인 계정 목록');
+
+      ['이메일', '역할', '상태', '처리 정보', '관리'].forEach(function(label) {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = label;
+        head.appendChild(th);
+      });
+      thead.appendChild(head);
+      table.appendChild(thead);
+
+      users.forEach(function(user) {
+        const row = document.createElement('tr');
+        const email = document.createElement('td');
+        const roleCell = document.createElement('td');
+        const status = document.createElement('td');
+        const meta = document.createElement('td');
+        const action = document.createElement('td');
+        const actions = document.createElement('div');
+        const normalizedEmail = String(user.email || '').toLowerCase();
+        const isPrimary = !!user.isPrimaryAdmin || (!!PRIMARY_ADMIN && normalizedEmail === PRIMARY_ADMIN);
+        const isAdmin = isPrimary || user.role === 'ADMIN' || user.isAdmin === true;
+        const isRevoked = user.status === 'REVOKED';
+
+        email.className = 'email';
+        email.textContent = user.email || '';
+        addBadge(
+          roleCell,
+          isPrimary ? '기본 관리자' : isAdmin ? '관리자' : '조회자',
+          isPrimary ? 'primary' : isAdmin ? 'admin' : 'viewer'
+        );
+        addBadge(status, isRevoked ? '회수됨' : '사용 중', isRevoked ? 'revoked' : 'active');
+        meta.className = 'meta';
+        addMeta(
+          meta,
+          isRevoked ? user.revokedAt : user.grantedAt,
+          isRevoked ? user.revokedBy : user.grantedBy
+        );
+
+        actions.className = 'actions';
+        if (isPrimary) {
+          const note = document.createElement('span');
+          note.className = 'locked';
+          note.textContent = '변경 불가';
+          actions.appendChild(note);
+        } else if (isRevoked) {
+          addAction(actions, '권한 복구', 'restore', 'restore', user.email);
+        } else {
+          if (isAdmin) {
+            addAction(actions, '조회자로 변경', 'demote', 'demote', user.email);
+            if (CAN_TRANSFER_PRIMARY) addAction(actions, '기본 관리자 이전', 'promote', 'transfer', user.email);
+          } else {
+            addAction(actions, '관리자로 변경', 'promote', 'promote', user.email);
+          }
+          addAction(actions, '권한 회수', 'danger', 'revoke', user.email);
+        }
+
+        action.className = 'actionCell';
+        action.appendChild(actions);
+        [email, roleCell, status, meta, action].forEach(cell => row.appendChild(cell));
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+    }
+
+    function load() {
+      rpc('getDashboardAccessAdminData', [], render);
+    }
+
+    $('users').addEventListener('click', function(event) {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const action = button.dataset.action;
+      const email = button.dataset.email;
+      const rpcs = {
+        promote: 'grantDashboardAdminAccess',
+        demote: 'demoteDashboardAdminAccess',
+        revoke: 'revokeDashboardAccess',
+        restore: 'restoreDashboardAccess'
+        ,transfer: 'transferDashboardPrimaryAdmin'
+      };
+      const labels = {
+        promote: '관리자로 변경',
+        demote: '조회자로 변경',
+        revoke: '권한 회수',
+        restore: '권한 복구'
+        ,transfer: '기본 관리자 이전'
+      };
+      if (!rpcs[action]) return;
+      if (action === 'transfer' && !confirm(email + ' 계정으로 기본 관리자 권한을 이전할까요?\n\n기존 백업 트리거는 제거됩니다. 이전 후 새 기본 관리자가 installDailyArchiveTriggerV1 함수를 한 번 실행해야 합니다.')) return;
+      if ((action === 'demote' || action === 'revoke') && !confirm(email + ' 계정을 ' + labels[action] + '할까요?')) return;
+      rpc(rpcs[action], [email], function() {
+        notify(action === 'transfer' ? '기본 관리자를 이전했습니다. 새 기본 관리자가 installDailyArchiveTriggerV1 함수를 실행해야 매일 3시 백업이 재개됩니다.' : email + ' 계정을 ' + labels[action] + '했습니다.', true);
+        load();
+      });
+    });
+
+    $('grantForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const email = $('email').value;
+      const role = $('role').value;
+      const rpcName = role === 'ADMIN' ? 'grantDashboardAdminAccess' : 'grantDashboardAccess';
+      const roleLabel = role === 'ADMIN' ? '관리자' : '조회자';
+      rpc(rpcName, [email], function() {
+        notify(email + ' 계정을 ' + roleLabel + '로 승인했습니다.', true);
+        $('email').value = '';
+        $('role').value = 'VIEWER';
+        load();
+      });
+    });
+
+    load();
+  </script>
+</body>
+</html>

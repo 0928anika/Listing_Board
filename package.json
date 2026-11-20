@@ -2,6 +2,6 @@
   "name": "listing-board",
   "private": true,
   "scripts": {
-    "test": "node scripts/check-listing-analytics.cjs && node scripts/check-crawl-analytics.cjs && node scripts/check-day-planning.cjs"
+    "test": "node scripts/check-listing-analytics.cjs && node scripts/check-crawl-analytics.cjs && node scripts/check-day-planning.cjs && node scripts/check-leadership-report.cjs"
   }
 }

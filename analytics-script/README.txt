@@ -1,3 +1,12 @@
+Listing Analytics A007
+
+최신 안내: A007-UPDATE.md
+일반 분석: Code.gs + Layout.gs 교체 후 refreshListingAnalytics 실행.
+일회용 리더 보고: LeadershipReport.gs 추가 후 buildCrawlerHubLeadershipReport 별도 실행.
+리더 보고서는 일반 새로고침과 트리거에서 변경하지 않습니다. 개인별 비교 없이 월별 팀 성과만 표시합니다.
+
+이하 이전 버전 안내:
+
 Listing Analytics A006
 
 최신 업데이트·계산 기준: A006-UPDATE.md

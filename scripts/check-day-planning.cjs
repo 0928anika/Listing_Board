@@ -26,7 +26,7 @@ check(()=>assert.equal(p.raw.crawlerFte,0.5));
 check(()=>assert.equal(p.raw.listerFte,1.5));
 check(()=>assert.equal(p.raw.old1000,4));
 check(()=>assert.equal(p.raw.new1000,3));
-check(()=>assert.equal(p.impact.find(r=>r[0]==='준비+등록 합산 VI/환산인일')[1],1000/3));
+check(()=>assert.equal(p.impact.find(r=>r[0]==='준비+리스팅 합산 VI/d')[1],1000/3));
 check(()=>assert.equal(p.impact.find(r=>r[0]==='직렬 공정의 1작업일 처리용량(병목)')[1],1000));
 check(()=>{const o=build(data,{crawler:0.5,lister:0.5});assert.equal(o._crawl.monthlyPreparation.rows[0][10],2000);assert.equal(o._crawl.dayMonthly.find(r=>r[1]==='크롤링')[5],1000);assert.equal(o._plan.raw.new1000,1.5);});
 check(()=>{const d=structuredClone(data);d.WORK_SESSIONS.push(['S4','Lister','C','3P','PAUSED',serial('2026-11-03'),serial('2026-11-03'),99999,100]);const o=build(d);assert.equal(o._dayProductivity['작업자 월별'].find(r=>r[1]==='Lister')[6],1);assert.equal(o._crawl.dayMonthly.find(r=>r[1]==='크롤링')[5],600);});
@@ -68,7 +68,12 @@ check(()=>{
  let sheet=null,stored=[],writes=0;
  const ss={getSheetByName:()=>sheet,insertSheet:()=>{sheet={getRange(){let range;range=new Proxy({}, {get(_,method){if(method==='setValues')return rows=>{stored=rows.map(r=>Array.from(r));writes++;return range;};return ()=>range;}});return range;},getDataRange:()=>({getValues:()=>stored}),setFrozenRows(){},setColumnWidth(){}};return sheet;}};
  const first=ctx.laPlanConfig_(ss,'2026-11-20');assert.equal(first.crawlers,2);assert.equal(first.listers,null);assert.equal(first.targetDays,5);
- stored.find(r=>r[0]==='등록 환산 인원')[1]=2.5;const second=ctx.laPlanConfig_(ss,'2026-11-20');assert.equal(second.listers,2.5);assert.equal(writes,1);
- stored.find(r=>r[0]==='등록 환산 인원')[1]=-1;assert.throws(()=>ctx.laPlanConfig_(ss,'2026-11-20'),/양수/);
+ stored.find(r=>r[0]==='리스팅 보정 인원')[1]=2.5;const second=ctx.laPlanConfig_(ss,'2026-11-20');assert.equal(second.listers,2.5);assert.equal(writes,1);
+ stored.find(r=>r[0]==='리스팅 보정 인원')[1]=-1;assert.throws(()=>ctx.laPlanConfig_(ss,'2026-11-20'),/양수/);
+});
+check(()=>{
+ const rows=[['계획 설정(A006)','값','설명'],['기준 월','2026-11',''],['크롤링 환산 인원',2,''],['등록 환산 인원',2.5,'등록 인원'],['목표 작업일',5,''],['등록 VI/환산인일 보정값',700,'환산인일 기준']];
+ const writes=[];const sheet={getDataRange:()=>({getValues:()=>rows}),getRange:(...args)=>({setValues:value=>writes.push({args,value})})};
+ const c=ctx.laPlanConfig_({getSheetByName:()=>sheet},'2026-11-20');assert.equal(c.listers,2.5);assert.equal(c.listingRate,700);assert.equal(writes.length,2);assert.ok(writes.every(w=>w.args[1]!==2));assert.equal(rows[3][1],2.5);
 });
 console.log(JSON.stringify({passed:count,failed:0,scope:'Adjusted person-days, mixed-stage deduplication, monthly attribution, forecast math, missing data and hold-adjusted lead times'}));

@@ -1,4 +1,4 @@
-/** Listing Analytics A006. Bound to the analysis spreadsheet, never the source. */
+/** Listing Analytics A007. Bound to the analysis spreadsheet, never the source. */
 const LA_TABS=['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교','크롤링 효과','투입 계획'];
 function onOpen(){SpreadsheetApp.getUi().createMenu('누적 분석').addItem('초기 설정','setupListingAnalytics').addItem('전체 새로고침','refreshListingAnalytics').addItem('매일 자동 갱신 설치','installListingAnalyticsDaily').addToUi();}
 function setupListingAnalytics(){
@@ -193,19 +193,23 @@ function laCrawlMonthly_(data,today,weights){
 function laPlanConfig_(ss,today){
   const name='투입 계획 설정';let sheet=ss.getSheetByName(name);
   if(!sheet){sheet=ss.insertSheet(name);sheet.getRange(1,1,9,3).setValues([
-    ['계획 설정(A006)','값','설명'],['기준 월',"'"+today.slice(0,7),'YYYY-MM. 등록·크롤링 속도의 표본 월'],
-    ['크롤링 환산 인원',2,'예시 시작값. 1명×0.5 근무비율은 0.5명. 전담 역할별 유효 인원 입력'],
-    ['등록 환산 인원','','3P 등록에 배정할 유효 인원 합계. 크롤링 인원과 역할 중복 배정 주의'],
+    ['계획 설정(A006)','값','설명'],['기준 월',"'"+today.slice(0,7),'YYYY-MM. 리스팅·크롤링 속도의 표본 월'],
+    ['크롤링 보정 인원',2,'예시 시작값. 1명×0.5 근무비율은 0.5명. 전담 역할별 유효 인원 입력'],
+    ['리스팅 보정 인원','','3P 리스팅에 배정할 유효 인원 합계. 크롤링 인원과 역할 중복 배정 주의'],
     ['목표 작업일',5,'현재 잔량만 처리할 목표. 신규 유입·휴일·대기시간 제외'],
     ['미확정 요청당 예상 VI','','빈칸이면 기준 월 완료 크롤링 요청당 평균 사용'],
-    ['크롤링 VI/환산인일 보정값','','빈칸이면 기준 월 물량/작업자별 환산 기록일 합계. 누락 시 보정'],
-    ['등록 VI/환산인일 보정값','','빈칸이면 기준 월 크롤링 건의 내부 3P 기록 기준 속도'],
-    ['설명','변경 후 전체 새로고침','환산인일=작업자 고유 기록일×CONFIG G:H 근무비율. 시간은 사용하지 않음']]);sheet.setFrozenRows(1);sheet.setColumnWidth(1,255);sheet.setColumnWidth(2,160);sheet.setColumnWidth(3,700);sheet.getRange('A1:C9').setWrap(true);sheet.getRange('B3:B8').setNumberFormat('0.00');}
+    ['크롤링 VI/d 보정값','','빈칸이면 기준 월 물량/작업자별 환산 기록일 합계. 누락 시 보정'],
+    ['리스팅 VI/d 보정값','','빈칸이면 기준 월 크롤링 건의 내부 3P 기록 기준 속도'],
+    ['설명','변경 후 전체 새로고침','d=작업자 고유 기록일×CONFIG G:H 근무비율. 시간은 사용하지 않음']]);sheet.setFrozenRows(1);sheet.setColumnWidth(1,255);sheet.setColumnWidth(2,160);sheet.setColumnWidth(3,700);sheet.getRange('A1:C9').setWrap(true);sheet.getRange('B3:B8').setNumberFormat('0.00');}
   const rows=sheet.getDataRange().getValues();if(!rows[0]||rows[0][0]!=='계획 설정(A006)')throw Error('투입 계획 설정 탭에 기존 내용이 있습니다. 이름을 변경해 보존한 뒤 다시 실행하세요.');
-  const values={};rows.slice(1).forEach(r=>values[r[0]]=r[1]);
+  const rename=v=>typeof v==='string'?v.replace(/등록/g,'리스팅').replace(/VI\/환산인일/g,'VI/d').replace(/환산인일/g,'d').replace(/환산 인원/g,'보정 인원'):v;
+  const settings=rows.slice(1);
+  if(settings.some(r=>rename(r[0])!==r[0]))sheet.getRange(2,1,settings.length,1).setValues(settings.map(r=>[rename(r[0])]));
+  if(settings.some(r=>rename(r[2])!==r[2]))sheet.getRange(2,3,settings.length,1).setValues(settings.map(r=>[rename(r[2])===undefined?'':rename(r[2])]));
+  const values={};settings.forEach(r=>values[rename(String(r[0]))]=r[1]);
   const month=String(values['기준 월']||'').replace(/^'/,'').trim();if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw Error('투입 계획 설정: 기준 월을 YYYY-MM으로 입력하세요.');
   function number(key,integer){const value=values[key];if(value===''||value===undefined)return null;const n=Number(value);if(!Number.isFinite(n)||n<=0||(integer&&!Number.isInteger(n)))throw Error('투입 계획 설정의 양수 입력 확인: '+key);return n;}
-  return {month:month,crawlers:number('크롤링 환산 인원'),listers:number('등록 환산 인원'),targetDays:number('목표 작업일',true),requestVi:number('미확정 요청당 예상 VI'),crawlRate:number('크롤링 VI/환산인일 보정값'),listingRate:number('등록 VI/환산인일 보정값')};
+  return {month:month,crawlers:number('크롤링 보정 인원'),listers:number('리스팅 보정 인원'),targetDays:number('목표 작업일',true),requestVi:number('미확정 요청당 예상 VI'),crawlRate:number('크롤링 VI/d 보정값'),listingRate:number('리스팅 VI/d 보정값')};
 }
 function laPlan_(data,crawl,input,today){
   const month=input.month||today.slice(0,7),monthly=crawl.monthlyPreparation.rows.filter(r=>r[0]===month);
@@ -241,10 +245,10 @@ function laPlan_(data,crawl,input,today){
   const crawlerFte=crawlDays===0?0:crawlDays!==null&&input.targetDays>0?crawlDays/input.targetDays:null,listerFte=listingDays===0?0:listingDays!==null&&input.targetDays>0?listingDays/input.targetDays:null;
   const old1000=need(1000,manualRate),register1000=need(1000,listingRate),prep1000=need(1000,crawlRate),new1000=register1000!==null&&prep1000!==null?register1000+prep1000:null;
   const show=x=>x===null||x===undefined?'':x;
-  return {assumptions:[['기준 월',month],['크롤링 VI/환산인일',show(crawlRate)],['크롤링 건 3P VI/환산인일',show(listingRate)],['비크롤링 건 3P VI/환산인일',show(manualRate)],['요청당 예상 VI',show(averageVi)],['크롤링 환산 인원',show(input.crawlers)],['등록 환산 인원',show(input.listers)],['목표 작업일',show(input.targetDays)]],
+  return {assumptions:[['기준 월',month],['크롤링 VI/d',show(crawlRate)],['크롤링 건 3P VI/d',show(listingRate)],['비크롤링 건 3P VI/d',show(manualRate)],['요청당 예상 VI',show(averageVi)],['크롤링 보정 인원',show(input.crawlers)],['리스팅 보정 인원',show(input.listers)],['목표 작업일',show(input.targetDays)]],
     backlog:[['크롤링 완료·3P 잔량',backlog.ready.count,backlog.ready.vi,0],['비크롤링·3P 잔량',backlog.manual.count,backlog.manual.vi,0],['크롤링 대기',backlog.pending.count,backlog.pending.vi,backlog.pending.unknown],['분류/물량 확인 필요',backlog.unknown.count,backlog.unknown.vi,backlog.unknown.count],['ON HOLD (재개 전 예측 제외)',backlog.held.count,backlog.held.vi,backlog.held.unknown]],
-    impact:[['비크롤링 등록 1,000 VI(환산인일)',show(old1000)],['크롤링 준비 1,000 VI(환산인일)',show(prep1000)],['크롤링 후 등록 1,000 VI(환산인일)',show(register1000)],['준비+등록 합산 1,000 VI(환산인일)',show(new1000)],['준비+등록 합산 VI/환산인일',new1000>0?1000/new1000:''],['1,000 VI당 절감 환산인일(추정)',old1000!==null&&new1000!==null?old1000-new1000:''],['총 투입인일 기준 추정 효율 배수',old1000>0&&new1000>0?old1000/new1000:''],['크롤링 단계 1작업일 공급 VI',crawlRate&&input.crawlers>0?crawlRate*input.crawlers:''],['등록 단계 1작업일 처리 VI',listingRate&&input.listers>0?listingRate*input.listers:''],['직렬 공정의 1작업일 처리용량(병목)',crawlRate&&listingRate&&input.crawlers>0&&input.listers>0?Math.min(crawlRate*input.crawlers,listingRate*input.listers):'']],
-    forecast:[['미확정 크롤링 VI 추정분',show(estimated)],['크롤링 대기 VI(확정+추정)',show(pendingVi)],['필요 크롤링 환산인일',show(crawlDays)],['필요 3P 등록 환산인일',show(listingDays)],['준비+3P 필요 환산인일 합계',show(allDays)],['크롤링 단계 소요 작업일',show(crawlerElapsed)],['등록 단계 소요 작업일',show(listingElapsed)],['이상적 병행 처리 하한(작업일)',show(parallel)],['순차 처리 참고(작업일)',show(sequential)],['목표 작업일 내 필요 크롤링 환산 인원',show(crawlerFte)],['목표 작업일 내 필요 등록 환산 인원',show(listerFte)],['전일 전담 기준 크롤링 인원(올림)',crawlerFte!==null?Math.ceil(crawlerFte):''],['전일 전담 기준 등록 인원(올림)',listerFte!==null?Math.ceil(listerFte):''],['예측에서 제외된 요청 수',backlog.unknown.count+backlog.held.count]],
+    impact:[['비크롤링 리스팅 1,000 VI(환산인일)',show(old1000)],['크롤링 준비 1,000 VI(환산인일)',show(prep1000)],['크롤링 후 리스팅 1,000 VI(환산인일)',show(register1000)],['준비+리스팅 합산 1,000 VI(환산인일)',show(new1000)],['준비+리스팅 합산 VI/d',new1000>0?1000/new1000:''],['1,000 VI당 절감 환산인일(추정)',old1000!==null&&new1000!==null?old1000-new1000:''],['총 투입인일 기준 추정 효율 배수',old1000>0&&new1000>0?old1000/new1000:''],['크롤링 단계 1작업일 공급 VI',crawlRate&&input.crawlers>0?crawlRate*input.crawlers:''],['리스팅 단계 1작업일 처리 VI',listingRate&&input.listers>0?listingRate*input.listers:''],['직렬 공정의 1작업일 처리용량(병목)',crawlRate&&listingRate&&input.crawlers>0&&input.listers>0?Math.min(crawlRate*input.crawlers,listingRate*input.listers):'']],
+    forecast:[['미확정 크롤링 VI 추정분',show(estimated)],['크롤링 대기 VI(확정+추정)',show(pendingVi)],['필요 크롤링 환산인일',show(crawlDays)],['필요 3P 리스팅 환산인일',show(listingDays)],['준비+3P 필요 환산인일 합계',show(allDays)],['크롤링 단계 소요 작업일',show(crawlerElapsed)],['리스팅 단계 소요 작업일',show(listingElapsed)],['이상적 병행 처리 하한(작업일)',show(parallel)],['순차 처리 참고(작업일)',show(sequential)],['목표 작업일 내 필요 크롤링 보정 인원',show(crawlerFte)],['목표 작업일 내 필요 리스팅 보정 인원',show(listerFte)],['전일 전담 기준 크롤링 인원(올림)',crawlerFte!==null?Math.ceil(crawlerFte):''],['전일 전담 기준 리스팅 인원(올림)',listerFte!==null?Math.ceil(listerFte):''],['예측에서 제외된 요청 수',backlog.unknown.count+backlog.held.count]],
     raw:{pendingVi:pendingVi,crawlDays:crawlDays,listingDays:listingDays,allDays:allDays,parallel:parallel,sequential:sequential,crawlerFte:crawlerFte,listerFte:listerFte,old1000:old1000,new1000:new1000}};
 }
 
@@ -260,7 +264,7 @@ function refreshListingAnalytics(){
     ['작업자 주별','데이터 점검'].forEach(n=>{const s=ss.getSheetByName(n);if(s)ss.deleteSheet(s);});
     const notices=tabs['데이터 점검'][1].slice(6);console.log(JSON.stringify({analyticsNotices:notices}));
     ss.getSheetByName('CONFIG').getRange('E5:F5').setValues([['집계 참고사항 수',notices.length]]);
-    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A006']]);
+    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A007']]);
   }catch(e){const cfg=ss.getSheetByName('CONFIG');if(cfg)cfg.getRange('E1:F1').setValues([['갱신 상태','실패: '+e.message]]);throw e;}finally{lock.releaseLock();}
 }
 function installListingAnalyticsDaily(){

@@ -74,7 +74,7 @@ function laLayouts_(tabs){
     ['분류','REQUESTS 현재 크롤링 단계만 사용: CRAWL_COMPLETED=크롤링 / N/A=비크롤링 / 나머지=확인 불가. 대소문자·앞뒤 공백 정규화.'],
     ['소급 적용','완료일·크롤링 필요·최초 요청 유형은 사용하지 않음. 현재 단계를 과거 실적에 소급하므로 당시 작업 방식의 확정 이력은 아님.'],
     ['분석 대상','CONFIG 외부 목록을 제외한 내부 작업자의 3P 세션과 COMMITTED 장기 집계. 2P와 CRAWL 준비시간 제외.'],
-    ['대표 생산성','순증 VI 합계 ÷ sum(작업자별 고유 기록일×CONFIG 근무비율). 예: 0.5 근무자 10기록일=5환산인일. 0시간 실적도 포함하며 VI/h는 참고용. 음수 정정 유지.'],
+    ['대표 생산성','순증 VI 합계 ÷ sum(작업자별 고유 기록일×CONFIG 근무비율). 예: 0.5 근무자 10기록일=5환산인일. 0시간 실적도 포함. 음수 정정 유지.'],
     ['배수','대표 배수는 크롤링 VI/환산인일 ÷ 비크롤링 VI/환산인일. 관찰된 차이이며 인과 효과 아님. 같은 사람이 같은 날 두 유형을 작업하면 양쪽 분모에 포함되므로 합산 금지.'],
     ['비중','전체 비중은 확인 불가 물량까지 분모에 포함. 분류 확인 내 비중은 크롤링+비크롤링만 분모. 각 그룹 순증 VI가 음수이거나 분모 0이면 비중 공란.'],
     ['추이','완료/일시정지 세션의 종료일(KST) 귀속. ACTIVE·VI 누락 기록은 대표 등록 지표 제외. 일별은 기록 있는 날짜만 표시. 최근 7일은 7개 달력일 합산 VI/환산인일.'],
@@ -82,7 +82,7 @@ function laLayouts_(tabs){
     ['크롤링 개인 평균','전체 보유 이력 기준: CRAWL_COMPLETED 요청의 현재 Total VI를 현재 크롤링 작업자에게 1회 귀속. CRAWL 세션 종료일(없으면 시작일)의 작업자별 고유 일수로 나눔. 0시간·ACTIVE 기록도 날짜가 있으면 포함.'],
     ['개인 평균 한계','진행 중 요청의 기록일도 분모에 포함. 여러 요청 동시 작업은 하루로 중복 제거. 월별 물량은 요청-작업자 마지막 CRAWL 기록월로 추정 귀속. 완료일 미사용. 현재 Total VI는 제출 당시와 다를 수 있음.'],
     ['백업 누락 주의','현재 장기 집계는 CRAWL을 보존하지 않음. 요청-작업자 연결 기록이 없거나 물량 오류가 있으면 전체 평균 공란, 기록 연결 물량의 참고 평균 표시. 연결률 100%도 일부 작업일 누락까지 보증하지 않음.'],
-    ['확인 방법','최종 CONFIG 성공 시각과 A006 버전 확인. 기존 분석 지표의 계산 기준은 유지.']
+    ['확인 방법','최종 CONFIG 성공 시각과 A007 버전 확인. 기존 분석 지표의 계산 기준은 유지.']
   ],{0:'@',1:'@'});crawl[0].noteBlock=true;
   if(ca){
     crawlSection('02  월별 전환 비중 및 등록 생산성',['월','전체 순증 VI','크롤링 VI','비크롤링 VI','확인 불가 VI','크롤링 비중(전체)','크롤링 비중(분류 확인 내)','분류 확인 비중','크롤링 등록 VI/h','비크롤링 등록 VI/h','등록 생산성 배수'],ca.trends,{0:'@',1:'#,##0',2:'#,##0',3:'#,##0',4:'#,##0',5:'0.0%',6:'0.0%',7:'0.0%',10:'0.00"배"'});
@@ -160,7 +160,12 @@ function laLayouts_(tabs){
     if(s.customTotal){s.rows.push(s.customTotal);return;}
     if(total.some((v,i)=>i>0&&typeof v==='number'))s.rows.push(total);
   }));
-  Object.keys(layouts).forEach(n=>{let next=6,last=null;layouts[n].forEach(s=>{s.row=s.alongside&&last?last.row:next;const end=s.row+s.rows.length+(s.subheaders?3:2);next=Math.max(next,end+3);last=s;});});return layouts;
+  // Crawl effectiveness is exclusively day-based; remove legacy hourly tables.
+  layouts['크롤링 효과']=layouts['크롤링 효과'].filter(s=>!s.headers.some(h=>String(h).includes('VI/h'))&&!s.title.startsWith('08  '));
+  const audit=layouts['크롤링 효과'].find(s=>s.title.startsWith('07  '));
+  if(audit){audit.headers.splice(3,1);audit.rows.forEach(r=>r.splice(3,1));audit.formats={0:'@',1:'@',2:'#,##0',3:'#,##0',4:'#,##0'};}
+  function terminology(v){return typeof v==='string'?v.replace(/VI\/환산인일/g,'VI/d').replace(/환산 근무일당 완료 VI/g,'VI/d').replace(/환산 근무 인일|환산 기록 인일|환산인일/g,'d').replace(/작업기록 인일|기록 인일/g,'기록일 합계').replace(/환산 인원/g,'보정 인원').replace(/등록/g,'리스팅'):v;}
+  Object.keys(layouts).forEach(n=>{let next=6,last=null;layouts[n].forEach(s=>{s.title=terminology(s.title);s.headers=s.headers.map(terminology);if(s.subheaders)s.subheaders=s.subheaders.map(terminology);s.rows=s.rows.map(r=>r.map(terminology));s.row=s.alongside&&last?last.row:next;const end=s.row+s.rows.length+(s.subheaders?3:2);next=Math.max(next,end+3);last=s;});});return layouts;
 }
 function laClearReportMerges_(sheet){
   // A merged title can extend beyond getDataRange()'s last populated column.
@@ -184,7 +189,7 @@ function laRenderReports_(ss,layouts,updated){
     laClearReportMerges_(sheet);sheet.clear();sheet.setHiddenGridlines(true);sheet.setFrozenRows(3);sheet.setFrozenColumns(1);sheet.setTabColor(name==='외부 지원'?'#b7791f':'#304e76');
     sheet.getRange(1,1,height,width).setBackground('#f4f7fb').setFontFamily('Arial').setFontSize(10).setFontColor('#24354b').setVerticalAlignment('middle');sheet.setColumnWidth(1,24);sheet.setColumnWidths(2,width-1,112);sheet.setColumnWidth(2,170);sheet.setRowHeights(1,height,24);
     sheet.getRange(1,2,1,width-2).merge().setValue('LISTING  /  '+name).setFontSize(18).setFontWeight('bold').setFontColor('#183555');sheet.setRowHeight(1,38);
-    sheet.getRange(2,2,1,width-2).merge().setValue('최근 갱신 '+updated+' KST  |  A006  |  수치는 원본 가용 이력 기준').setFontColor('#62758b');
+    sheet.getRange(2,2,1,width-2).merge().setValue('최근 갱신 '+updated+' KST  |  A007  |  수치는 원본 가용 이력 기준').setFontColor('#62758b');
     const note=name==='투입 계획'?'설정 탭의 환산 인원·기준 속도를 확인하세요 / 현재 잔량의 3P 등록까지 예측 / 2P 완료 납기 아님':name==='크롤링 효과'?'내부 3P 등록 생산성 / 現 크롤링 단계 소급 분류 / 준비시간 제외 / 인과 효과 아님':name==='외부 지원'?'CONFIG 지정 외부 지원만 표시 · 내부 전체 실적 및 내부 순위에서 제외':name==='내부·외부 비교'?'2P·3P 별도 비교 / 1인·1일 평균 = 총 VI ÷ 작업자별 근무일수 합계 / 보정 = 총 VI ÷ 환산 근무일수 합계':name==='Node별'?'이월 완료율 = 이전 월 접수 완료 ÷ 전체 당월 완료 (납기 위반율 아님) / 접수일 미확인·오류는 별도 표시':'내부 실적 · 외부 지원 제외 / 진행 중인 기간은 부분 실적 / 순위 공란은 최소시간 미달 또는 시간 없음';
     sheet.getRange(3,2,1,width-2).merge().setValue(note).setFontSize(9).setFontColor('#62758b');
     sections.forEach(s=>{

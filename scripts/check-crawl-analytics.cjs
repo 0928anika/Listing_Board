@@ -55,11 +55,11 @@ check(()=>{const d=structuredClone(data);d.REQUESTS[0][5]='Renamed';assert.equal
 check(()=>{const d=structuredClone(data);d.WORK_SESSIONS.push(['S13','Amy','M','3P','PAUSED',serial('2026-11-15'),60,-500]);const c=build(d)._crawl;assert.equal(c.trends[0][5],'');assert.equal(c.trends[0][10],'');});
 check(()=>{const d=structuredClone(data);d.WORK_SESSIONS.push(['S14','Amy','Missing','3P','PAUSED',serial('2026-11-15'),60,5]);assert.ok(build(d)._crawl.reasons.some(r=>r[1]==='요청 메타데이터 없음'));});
 const layouts=ctx.laLayouts_(out),sections=layouts['크롤링 효과'];
-check(()=>assert.equal(sections.length,9));
+check(()=>assert.equal(sections.length,15));
 check(()=>assert.ok(sections.every(s=>s.noTotal&&!s.rows.some(r=>r[0]==='TOTAL'))));
 check(()=>assert.ok(sections.every(s=>s.rows.every(r=>r.length===s.headers.length))));
 check(()=>assert.ok(sections.every((s,i)=>!i||s.row>sections[i-1].row+sections[i-1].rows.length)));
-check(()=>{const empty=build({REQUESTS:[rh],WORK_SESSIONS:[sh]});assert.equal(empty._crawl.daily.length,0);assert.ok(ctx.laLayouts_(empty)['크롤링 효과'].length===9);});
+check(()=>{const empty=build({REQUESTS:[rh],WORK_SESSIONS:[sh]});assert.equal(empty._crawl.daily.length,0);assert.ok(ctx.laLayouts_(empty)['크롤링 효과'].length===15);});
 const prepData={REQUESTS:[['Request ID','크롤링 단계','크롤링 작업자','Total VI'],['R1','CRAWL_COMPLETED','Amy',600],['R2','CRAWL_COMPLETED','Amy',400],['R3','CRAWL_COMPLETED','Bob',900],['R4','CRAWL_REQUESTED','Amy',5000]],WORK_SESSIONS:[['Request ID','Stage','Worker','Status','Started At','Ended At','Duration Minutes'],
  ['R1','CRAWL','Amy','PAUSED',serial('2026-11-01'),serial('2026-11-01'),0],
  ['R2','CRAWL','Amy','PAUSED',serial('2026-11-01'),serial('2026-11-01'),0],

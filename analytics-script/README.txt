@@ -1,3 +1,11 @@
+Listing Analytics A006
+
+최신 업데이트·계산 기준: A006-UPDATE.md
+Code.gs와 Layout.gs를 전체 교체 후 refreshListingAnalytics 실행.
+대표 지표: 환산 근무일당 완료 VI. 투입 계획 설정 탭에서 인원·목표 작업일을 입력하세요.
+
+이하 이전 버전 안내:
+
 Listing Analytics A005
 
 기존 분석 파일 업데이트: A005-UPDATE.md를 먼저 확인하세요.

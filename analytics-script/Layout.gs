@@ -122,6 +122,8 @@ function laReportValue_(value,header){
     const day=typeof value==='number'?laDay_(value):value;
     if(typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day))return Date.parse(day+'T00:00:00Z')/86400000+25569;
   }
+  // Period labels are text. Sheets may otherwise coerce them into date serials.
+  if(typeof value==='string'&&/^\d{4}-\d{2}(?:-\d{2})?$/.test(value))return "'"+value;
   return typeof value==='string'&&/^[=+@-]/.test(value)?"'"+value:value;
 }
 function laRenderReports_(ss,layouts,updated){
@@ -138,9 +140,12 @@ function laRenderReports_(ss,layouts,updated){
     sections.forEach(s=>{
       const w=s.headers.length,r=s.row,c=s.col,bodyRow=r+(s.subheaders?3:2);
       sheet.getRange(r,c,1,w).merge().setValue(s.title).setFontWeight('bold').setFontSize(11).setFontColor('#183555');sheet.setRowHeight(r,30);
-      sheet.getRange(r+1,c,1,w).setValues([s.headers]).setBackground('#304e76').setFontColor('#ffffff').setFontWeight('bold').setWrap(true).setHorizontalAlignment('center');sheet.setRowHeight(r+1,36);
-      if(s.subheaders){sheet.getRange(r+2,c,1,w).setValues([s.subheaders]).setBackground('#d8e5f4').setFontWeight('bold').setHorizontalAlignment('center');sheet.getRange(r+1,c,2,1).merge();const groups=s.headerGroups||Array.from({length:(w-1)/2},(_,i)=>({offset:1+i*2,width:2}));groups.forEach(g=>sheet.getRange(r+1,c+g.offset,1,g.width).merge());sheet.setColumnWidths(c+1,w-1,76);}
-      const body=sheet.getRange(bodyRow,c,s.rows.length,w);body.setValues(s.rows.map(row=>row.map((v,i)=>laReportValue_(v,s.headers[i])))).setNumberFormat('#,##0.00').setHorizontalAlignment('right');
+      sheet.getRange(r+1,c,1,w).setNumberFormat('@').setValues([s.headers.map(v=>laReportValue_(v,''))]).setBackground('#304e76').setFontColor('#ffffff').setFontWeight('bold').setWrap(true).setHorizontalAlignment('center');sheet.setRowHeight(r+1,36);
+      if(s.subheaders){sheet.getRange(r+2,c,1,w).setNumberFormat('@').setValues([s.subheaders.map(v=>laReportValue_(v,''))]).setBackground('#d8e5f4').setFontWeight('bold').setHorizontalAlignment('center');sheet.getRange(r+1,c,2,1).merge();const groups=s.headerGroups||Array.from({length:(w-1)/2},(_,i)=>({offset:1+i*2,width:2}));groups.forEach(g=>sheet.getRange(r+1,c+g.offset,1,g.width).merge());sheet.setColumnWidths(c+1,w-1,76);}
+      const body=sheet.getRange(bodyRow,c,s.rows.length,w);body.setNumberFormat('#,##0.00');
+      // Set temporal column formats BEFORE writing numeric date values.
+      s.headers.forEach((header,i)=>{if(header==='날짜')sheet.getRange(bodyRow,c+i,s.rows.length,1).setNumberFormat('yyyy-mm-dd');else if(header==='월')sheet.getRange(bodyRow,c+i,s.rows.length,1).setNumberFormat('yyyy-mm');});
+      body.setValues(s.rows.map(row=>row.map((v,i)=>laReportValue_(v,s.headers[i])))).setHorizontalAlignment('right');
       body.setBackgrounds(s.rows.map((_,i)=>Array(w).fill(i%2===0?'#ffffff':'#eaf0f8')));sheet.getRange(bodyRow,c,s.rows.length,1).setHorizontalAlignment('left');
       s.rows.forEach((row,i)=>{if(row[0]==='TOTAL')sheet.getRange(bodyRow+i,c,1,w).setBackground('#d8e5f4').setFontWeight('bold');});
       Object.keys(s.formats).forEach(i=>sheet.getRange(bodyRow,c+Number(i),s.rows.length,1).setNumberFormat(s.formats[i]));

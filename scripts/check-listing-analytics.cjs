@@ -60,6 +60,9 @@ check(()=>{const d=structuredClone(data);d.REQUESTS[1][3]=d.REQUESTS[1][4];asser
 check(()=>assert.equal(ctx.laReportValue_('2026-10-01','날짜'),serial('2026-10-01')));
 check(()=>assert.equal(ctx.laReportValue_(serial('2026-10-01'),'날짜'),serial('2026-10-01')));
 check(()=>assert.equal(ctx.laReportValue_('TOTAL','날짜'),'TOTAL'));
+check(()=>assert.equal(ctx.laReportValue_('2026-11','월'),"'2026-11"));
+check(()=>assert.equal(ctx.laReportValue_('2026-11-01','기간'),"'2026-11-01"));
+check(()=>assert.equal(ctx.laReportValue_('2026-11',''),"'2026-11"));
 check(()=>assert.equal(layouts['외부 지원'].find(s=>s.title==='외부 일별 작업량·시간').formats[0],'yyyy-mm-dd'));
 check(()=>{const t=structuredClone(out);const original=t['주별 비교'][1][0];t['주별 비교'][1]=['2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-10-19'].map(p=>{const r=Array.from(original);r[0]=p;return r;});const sections=ctx.laLayouts_(t)['주별 비교'];assert.equal(sections.length,4);assert.equal(sections[0].headers.slice(1,-1).join(','),'2026-09-07,2026-09-14,2026-09-21,2026-09-28');assert.equal(sections[1].headers.slice(1,-1).join(','),'2026-10-05,2026-10-12,2026-10-19');assert.ok(sections.every(s=>new Set(s.headers.slice(1,-1).map(p=>p.slice(0,7))).size===1));});
 check(()=>{let merges=[{breakApart(){assert.equal(this,merges[0]);}},{breakApart(){assert.equal(this,merges[1]);}}],calls=0;const sheet={getMaxRows:()=>100,getMaxColumns:()=>40,getRange(...args){assert.deepEqual(args,[1,1,100,40]);calls++;return {getMergedRanges:()=>merges};}};ctx.laClearReportMerges_(sheet);assert.equal(calls,1);});

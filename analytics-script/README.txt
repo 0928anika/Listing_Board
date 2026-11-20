@@ -1,3 +1,7 @@
+일회용 11월 보고 최신 업데이트: NOVEMBER-REPORT.md
+LeadershipReport.gs만 전체 교체 후 buildNovemberReport 실행.
+기존 자동 생성 탭을 11월 보고로 변경합니다. 일반 새로고침과 분리됩니다.
+
 Listing Analytics A007
 
 최신 안내: A007-UPDATE.md

@@ -3,7 +3,7 @@
 Google Apps Script 기반 리스팅 운영 및 분석 코드입니다.
 
 - `apps-script/`: 운영 스프레드시트용 코드. B008 / P012 기준.
-- `analytics-script/`: 별도 분석 스프레드시트용 코드. A007 개발본: VI/d·리스팅 지표와 별도 실행 리더용 월별 보고서.
+- `analytics-script/`: 별도 분석 스프레드시트용 코드. A007 개발본: VI/d·리스팅 지표와 별도 실행 11월 보고.
 
 두 폴더는 서로 다른 Apps Script 프로젝트입니다. 각 프로젝트에 해당 폴더만 적용합니다. Google 스프레드시트 데이터, 인증 파일 및 실제 프로젝트 연결 정보는 포함하지 않습니다.
 
@@ -23,3 +23,5 @@ Google Apps Script 기반 리스팅 운영 및 분석 코드입니다.
 A007 기존 분석 파일 업데이트는 `analytics-script/A007-UPDATE.md`, 신규 설치 및 기존 설정은 `analytics-script/README.txt`를 따릅니다. 분석은 운영 스프레드시트를 조회하는 별도 프로젝트입니다.
 
 clasp 사용 시 `.clasp.example.json`을 참고해 로컬 `.clasp.json`을 만들고, 대상 프로젝트에 맞춰 `scriptId`와 `rootDir`을 설정합니다. 연결 파일과 인증 정보는 커밋하지 않습니다. 브랜치 전환이나 GitHub 업로드만으로 Apps Script에 자동 배포되지는 않습니다.
+
+일회용 **11월 보고**의 최신 변경과 실행법은 [NOVEMBER-REPORT.md](analytics-script/NOVEMBER-REPORT.md)를 확인하세요. 보고서 파일만 교체한 뒤 `buildNovemberReport`를 별도로 실행합니다.

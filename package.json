@@ -1,0 +1,7 @@
+{
+  "name": "listing-board",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/check-listing-analytics.cjs && node scripts/check-crawl-analytics.cjs"
+  }
+}

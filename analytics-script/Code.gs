@@ -1,5 +1,5 @@
-/** Listing Analytics A004. Bound to a NEW spreadsheet, never the source. */
-const LA_TABS=['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교'];
+/** Listing Analytics A005. Bound to the analysis spreadsheet, never the source. */
+const LA_TABS=['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교','크롤링 효과'];
 function onOpen(){SpreadsheetApp.getUi().createMenu('누적 분석').addItem('초기 설정','setupListingAnalytics').addItem('전체 새로고침','refreshListingAnalytics').addItem('매일 자동 갱신 설치','installListingAnalyticsDaily').addToUi();}
 function setupListingAnalytics(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();let s=ss.getSheetByName('CONFIG');
@@ -44,7 +44,7 @@ function laDay_(v){return typeof v==='number'&&Number.isFinite(v)&&v>0?new Date(
 function laWeek_(day){const d=new Date(day+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return d.toISOString().slice(0,10);}
 function laNumber_(v){return typeof v==='number'&&Number.isFinite(v);}
 function laBuild_(data,c,today){
-  const issues=[],sessions=[],req={},seen=new Set(),aggSeen=new Set(),rawGroups=new Set();
+  const issues=[],sessions=[],req={},seen=new Set(),aggSeen=new Set(),rawGroups=new Set(),crawlMeta=laCrawlMeta_(data.REQUESTS);
   const warn=(type,id,detail)=>issues.push([type,id,detail]);
   const rt=laTable_(data.REQUESTS,['Request ID','Node','Status','Requested At','Completed At'],'REQUESTS');
   rt.rows.forEach(r=>{const v=n=>r[rt.h[n]],id=String(v('Request ID')||'').trim();if(!id)return;if(req[id])throw Error('중복 Request ID: '+id);req[id]={id:id,node:String(v('Node')||'미지정'),status:String(v('Status')||''),requested:laDay_(v('Requested At')),completed:laDay_(v('Completed At')),start:v('Requested At'),end:v('Completed At')};});
@@ -61,7 +61,7 @@ function laBuild_(data,c,today){
     else {const key=String(v('Session ID')||'');if(key){if(seen.has(key))throw Error('중복 Session ID: '+key);seen.add(key);}else warn('수기 세션 포함',id,worker+' '+day);rawGroups.add(group);}
     if(!req[id])warn('요청 없는 세션 포함',id,worker);
     if(minutes===0&&delta!==0)warn('시간 0 실적',id,worker+' '+day+' VI='+delta);
-    sessions.push({id:id,worker:worker,name:laName_(worker),stage:stage,day:day,delta:delta,hours:minutes/60,external:c.external.has(laName_(worker)),node:req[id]?req[id].node:'미지정'});
+    sessions.push({id:id,worker:worker,name:laName_(worker),stage:stage,day:day,delta:delta,hours:minutes/60,external:c.external.has(laName_(worker)),node:req[id]?req[id].node:'미지정',crawl:laCrawlClass_(crawlMeta[id])});
   }
   const st=laTable_(data.WORK_SESSIONS,['Session ID','Worker','Request ID','Stage','Status','Ended At','Duration Minutes','Completed VI Delta'],'WORK_SESSIONS');st.rows.forEach(r=>add(r,st.h,false));
   if(data.LONG_TERM_SESSIONS){const lt=laTable_(data.LONG_TERM_SESSIONS,['Aggregate ID','Status','Request ID','Worker','Stage','Work Date','Duration Minutes','Completed VI Delta'],'LONG_TERM_SESSIONS');lt.rows.forEach(r=>add(r,lt.h,true));}else warn('장기 집계 없음','','과거 백업 세션 포함 여부를 확인하세요. 상세 아카이브는 합산하지 않습니다.');
@@ -72,6 +72,8 @@ function laBuild_(data,c,today){
   function rows(gs){const ranks={};['3','2'].forEach(stage=>{const periods={};gs.forEach(g=>{if(g['h'+stage]>0&&g['h'+stage]>=c.min)(periods[g.period]||(periods[g.period]=[])).push(g);});Object.keys(periods).forEach(p=>{let prev=null,rank=0;periods[p].sort((a,b)=>b['v'+stage]/b['h'+stage]-a['v'+stage]/a['h'+stage]).forEach((g,i)=>{const rate=g['v'+stage]/g['h'+stage];if(rate!==prev)rank=i+1;prev=rate;ranks[JSON.stringify([p,g.worker,stage])]=rank;});});});return gs.map(g=>[g.period,g.worker,g.v3,g.v2,g.v3+g.v2,g.h3,g.h2,g.h3+g.h2,g.h3>0?g.v3/g.h3:'',g.h2>0?g.v2/g.h2:'',g.days.size,g.requests.size,ranks[JSON.stringify([g.period,g.worker,'3'])]||'',ranks[JSON.stringify([g.period,g.worker,'2'])]||'']);}
   const internal=sessions.filter(s=>!s.external),external=sessions.filter(s=>s.external),tabs={};
   tabs._workerDays=laWorkerDays_(sessions,c.weights||{});
+  tabs._crawl=laCrawlAnalysis_(data,sessions,today);
+  tabs._crawl.preparation=laCrawlPreparation_(data,today);
   tabs._nodeCompletion={};Object.values(req).forEach(r=>{if(r.status!=='DONE'||!r.completed||r.completed>today)return;const key=JSON.stringify([r.completed.slice(0,7),r.node]),g=tabs._nodeCompletion[key]||(tabs._nodeCompletion[key]={current:0,prior:0,unknown:0});if(!r.requested||!laNumber_(r.start)||!laNumber_(r.end)||r.start>r.end)g.unknown++;else if(r.requested.slice(0,7)===r.completed.slice(0,7))g.current++;else g.prior++;});
   [['월別','월'],['주別','주']].forEach(pair=>{const kind=pair[1],gs=summarize(internal,kind,false),rs=rows(gs);tabs[kind==='월'?'월별 비교':'주별 비교']=[headers.slice(0,12).concat(['직전 달력기간 VI','VI 증감률','직전 달력기간 시간','시간 증감률','집계 상태']),rs.map((r,i)=>{const d=new Date((kind==='월'?r[0]+'-01':r[0])+'T00:00:00Z');if(kind==='월')d.setUTCMonth(d.getUTCMonth()-1);else d.setUTCDate(d.getUTCDate()-7);const prevKey=d.toISOString().slice(0,kind==='월'?7:10),prev=rs.find(x=>x[0]===prevKey),open=kind==='월'?r[0]===today.slice(0,7):r[0]===laWeek_(today);return r.slice(0,12).concat([prev?prev[4]:'',prev&&prev[4]!==0?(r[4]-prev[4])/prev[4]:'',prev?prev[7]:'',prev&&prev[7]!==0?(r[7]-prev[7])/prev[7]:'',open?'진행 중: 이전 전체기간과 비교':'종료 기간: 재계산 가능']);})];});
   tabs['작업자 월별']=[headers,rows(summarize(internal,'월',true))];tabs['작업자 주별']=[headers,rows(summarize(internal,'주',true))];tabs['일별 기록']=[headers.slice(0,12),rows(summarize(internal,'일',true)).map(r=>r.slice(0,12))];
@@ -85,6 +87,73 @@ function laBuild_(data,c,today){
   c.external.forEach(n=>{if(!sessions.some(s=>s.name===n))warn('외부 이름 매칭 없음',n,'기간/이름 표기를 확인하세요.');});
   tabs['데이터 점검']=[['항목','Request/작업자','설명'],[['원본 범위','','REQUESTS + WORK_SESSIONS + COMMITTED LONG_TERM_SESSIONS. 상세 아카이브 직접 합산 안 함'],['외부 제외 정책','','외부 목록은 과거 전체에 소급. 내부 VI/시간/순위에서 제외. 요청 접수/완료는 전체 업무량'],['기간 정책','','Asia/Seoul, 종료일 귀속, 월요일 시작, 월력 기준. ACTIVE 제외'],['기록일 정책','','세션 종료일의 고유 일수. 출근일 아님'],['순위 정책','','단계별 합산 VI/합산 시간, 최소 '+c.min+'시간, 동률 공동순위. 전체 재계산'],['원본 한계','','현재 Request Node 기준. 과거 월말 상태 및 당시 Node는 복원하지 않음']].concat(issues)];return tabs;
 }
+// Classification intentionally uses current stage only, per the reporting contract.
+function laCrawlMeta_(rows){
+  const result=Object.create(null);if(!rows||!rows.length)return result;
+  const h={};rows[0].forEach((n,i)=>h[n]=i);
+  rows.slice(1).forEach(r=>{const id=String(r[h['Request ID']]||'').trim();if(id)result[id]={stage:String(r[h['크롤링 단계']]||'').trim()};});return result;
+}
+function laCrawlClass_(m){
+  if(!m)return '요청 메타데이터 없음';
+  const stage=String(m.stage||'').trim().toUpperCase();
+  if(stage==='CRAWL_COMPLETED')return '크롤링';
+  if(stage==='N/A')return '비크롤링';
+  return '단계 미입력/미완료/기타';
+}
+function laCrawlBucket_(){return {vi:0,hours:0,timedVi:0,untimedVi:0,requests:new Set(),records:0};}
+function laCrawlAdd_(g,s){g.vi+=s.delta;g.records++;g.requests.add(s.id);if(s.hours>0){g.hours+=s.hours;g.timedVi+=s.delta;}else g.untimedVi+=s.delta;}
+function laCrawlRate_(g){return g.hours>0?g.timedVi/g.hours:'';}
+function laCrawlRatio_(a,b){return typeof a==='number'&&typeof b==='number'&&a>0&&b>0?a/b:'';}
+function laCrawlAnalysis_(data,sessions,today){
+  const monthly=new Map(),daily=new Map(),workers=new Map(),nodes=new Map(),reasons=new Map();
+  function groups(map,key){if(!map.has(key))map.set(key,{crawl:laCrawlBucket_(),manual:laCrawlBucket_(),unknown:laCrawlBucket_()});return map.get(key);}
+  const samples=sessions.filter(s=>s.stage==='3P'&&!s.external);
+  samples.forEach(s=>{
+    const type=s.crawl==='크롤링'?'crawl':s.crawl==='비크롤링'?'manual':'unknown',month=s.day.slice(0,7);
+    [groups(monthly,month),groups(daily,s.day),groups(workers,JSON.stringify([month,s.name])),groups(nodes,JSON.stringify([month,s.node]))].forEach(g=>laCrawlAdd_(g[type],s));
+    if(type==='unknown'){const key=JSON.stringify([month,s.crawl]);if(!reasons.has(key))reasons.set(key,laCrawlBucket_());laCrawlAdd_(reasons.get(key),s);}
+  });
+  const labels={crawl:'크롤링',manual:'비크롤링',unknown:'확인 불가'};
+  const monthlyRows=[];Array.from(monthly.keys()).sort().reverse().forEach(month=>Object.keys(labels).forEach(k=>{const g=monthly.get(month)[k];monthlyRows.push([month,labels[k],g.vi,g.hours,g.timedVi,laCrawlRate_(g),g.requests.size,g.records,g.untimedVi]);}));
+  function rates(g){const total=g.crawl.vi+g.manual.vi+g.unknown.vi,known=g.crawl.vi+g.manual.vi,positive=Object.values(g).every(b=>b.vi>=0),cr=laCrawlRate_(g.crawl),mr=laCrawlRate_(g.manual);return [total,positive&&total>0?g.crawl.vi/total:'',positive&&known>0?g.crawl.vi/known:'',cr,mr,laCrawlRatio_(cr,mr),positive&&total>0?known/total:''];}
+  const dates=Array.from(daily.keys()).sort(),dailyRows=[];let left=0;
+  dates.forEach((day,i)=>{
+    const g=daily.get(day),r=rates(g),cutoff=new Date(Date.parse(day+'T00:00:00Z')-6*86400000).toISOString().slice(0,10);
+    while(dates[left]<cutoff)left++;
+    const rolling={crawl:laCrawlBucket_(),manual:laCrawlBucket_(),unknown:laCrawlBucket_()};
+    for(let j=left;j<=i;j++)Object.keys(rolling).forEach(k=>{const source=daily.get(dates[j])[k];['vi','hours','timedVi'].forEach(f=>rolling[k][f]+=source[f]);});
+    const rr=rates(rolling);dailyRows.push([day,g.crawl.vi,g.manual.vi,g.unknown.vi,r[1],r[2],r[6],r[3],r[4],r[5],r[0],rr[1],rr[3],rr[4],rr[5]]);
+  });
+  function comparisons(map){return Array.from(map.keys()).sort().reverse().map(key=>{const [month,label]=JSON.parse(key),g=map.get(key),a=g.crawl,b=g.manual,cr=laCrawlRate_(a),mr=laCrawlRate_(b);return [month,label,a.timedVi,a.hours,cr,b.timedVi,b.hours,mr,laCrawlRatio_(cr,mr),a.requests.size,b.requests.size,g.unknown.vi];});}
+  const trends=Array.from(monthly.keys()).sort().reverse().map(month=>{const g=monthly.get(month),r=rates(g);return [month,r[0],g.crawl.vi,g.manual.vi,g.unknown.vi,r[1],r[2],r[6],r[3],r[4],r[5]];});
+  return {monthly:monthlyRows,trends:trends,daily:dailyRows,workers:comparisons(workers),nodes:comparisons(nodes),reasons:Array.from(reasons.entries()).map(([key,g])=>JSON.parse(key).concat([g.vi,g.hours,g.requests.size,g.records])),today:today};
+}
+function laCrawlPreparation_(data,today){
+  const workers=new Map(),requestDays=new Map(),audit=[];
+  function worker(name){const key=laName_(name);if(!workers.has(key))workers.set(key,{name:String(name).trim(),days:new Set(),vi:0,requests:0,linkedVi:0,linked:0,invalid:0});return workers.get(key);}
+  const rows=data.WORK_SESSIONS||[],h={};(rows[0]||[]).forEach((n,i)=>h[n]=i);
+  rows.slice(1).forEach(r=>{
+    if(String(r[h.Stage]||'').trim().toUpperCase()!=='CRAWL')return;
+    const name=String(r[h.Worker]||'').trim(),id=String(r[h['Request ID']]||'').trim();
+    const day=laDay_(r[h['Ended At']])||laDay_(r[h['Started At']]);
+    if(!name||!day||day>today){audit.push([id,name,'CRAWL 작업자/날짜 누락 또는 미래 날짜','']);return;}
+    const g=worker(name);g.days.add(day);const key=JSON.stringify([id,laName_(name)]);if(!requestDays.has(key))requestDays.set(key,new Set());requestDays.get(key).add(day);
+  });
+  const requests=data.REQUESTS||[],rh={};(requests[0]||[]).forEach((n,i)=>rh[n]=i);
+  requests.slice(1).forEach(r=>{
+    if(String(r[rh['크롤링 단계']]||'').trim().toUpperCase()!=='CRAWL_COMPLETED')return;
+    const id=String(r[rh['Request ID']]||'').trim(),name=String(r[rh['크롤링 작업자']]||'').trim(),vi=r[rh['Total VI']];
+    if(!name){audit.push([id,'','완료 요청의 크롤링 작업자 없음',laNumber_(vi)?vi:'']);return;}
+    const g=worker(name);g.requests++;
+    if(!laNumber_(vi)||vi<0){g.invalid++;audit.push([id,name,'Total VI 누락/오류','']);return;}
+    g.vi+=vi;
+    if(requestDays.has(JSON.stringify([id,laName_(name)]))){g.linked++;g.linkedVi+=vi;}else audit.push([id,name,'해당 작업자의 CRAWL 기록일 없음 (백업/누락 가능)',vi]);
+  });
+  return {rows:Array.from(workers.values()).sort((a,b)=>a.name.localeCompare(b.name)).map(g=>{
+    const dates=Array.from(g.days).sort(),n=dates.length;
+    return [g.name,g.vi,g.requests,n,n&&g.requests>0&&g.linked===g.requests&&!g.invalid?g.vi/n:'',g.linkedVi,g.linked,g.requests?g.linked/g.requests:'',n&&g.linked>0?g.linkedVi/n:'',dates[0]||'',dates[dates.length-1]||''];
+  }),audit:audit};
+}
 function refreshListingAnalytics(){
   const lock=LockService.getDocumentLock();if(!lock.tryLock(1000))throw Error('다른 분석 갱신이 실행 중입니다.');
   const ss=SpreadsheetApp.getActiveSpreadsheet();try{
@@ -96,7 +165,7 @@ function refreshListingAnalytics(){
     ['작업자 주별','데이터 점검'].forEach(n=>{const s=ss.getSheetByName(n);if(s)ss.deleteSheet(s);});
     const notices=tabs['데이터 점검'][1].slice(6);console.log(JSON.stringify({analyticsNotices:notices}));
     ss.getSheetByName('CONFIG').getRange('E5:F5').setValues([['집계 참고사항 수',notices.length]]);
-    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A004']]);
+    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A005']]);
   }catch(e){const cfg=ss.getSheetByName('CONFIG');if(cfg)cfg.getRange('E1:F1').setValues([['갱신 상태','실패: '+e.message]]);throw e;}finally{lock.releaseLock();}
 }
 function installListingAnalyticsDaily(){

@@ -1,3 +1,11 @@
+Listing Analytics A005
+
+기존 분석 파일 업데이트: A005-UPDATE.md를 먼저 확인하세요.
+Code.gs와 Layout.gs를 전체 교체한 후 refreshListingAnalytics 실행.
+운영 코드/CONFIG/매니페스트/기존 트리거는 변경하지 않습니다.
+
+아래는 기존 A004 설정 안내입니다.
+
 Listing Analytics A004 — 2026-10-30
 
 既存 A003/H01~H04 업데이트

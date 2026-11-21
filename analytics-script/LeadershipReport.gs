@@ -196,7 +196,7 @@ function crhRender_(ss,r){
   const cards=[['11월 리스팅 VI',f(nov.vi,'integer'),'완료 물량'],['10월 대비 VI/d',f(r.growth,'ratio'),change(r.growth)],['11월 C/N 효과 중앙값',f(r.examples['2026-11'].medianRatio,'ratio'),r.examples['2026-11'].eligible+'명 비교'],['같은 참여 집단의 변화',f(r.cohort.change,'ratio'),change(r.cohort.change)+' · '+r.cohort.count+'명']];
   cards.forEach((card,i)=>{const col=1+i*3;text(4,col,3,card[0],'#dce9ed','#33586a',9);text(5,col,3,card[1],'#ffffff','#15364a',24).setFontWeight('bold');text(6,col,3,card[2],'#ffffff','#38726c',9);});sheet.setRowHeight(5,37);
   section(8,'01  월별 물량·생산성·투입 d');monthHeader(9,'지표');
-  const matrix=[['리스팅 VI',m=>r.summary[m].vi,'integer'],['리스팅 VI/d',m=>r.summary[m].listingRate,''],['크롤링 VI',m=>r.summary[m].prepared,'integer'],['크롤링 비중 (리스팅 VI 기준)',m=>r.summary[m].share,'percent'],['전체 C/N 배수 중앙값',m=>r.examples[m].medianRatio,'ratio'],['작업한 요청 수',m=>r.summary[m].requests,'integer'],['준비+리스팅 d (관측+추정)',m=>r.summary[m].complete?r.summary[m].totalD:'기록 확인 필요','days'],['그중 요청당 1일 가정 크롤링 d',m=>r.summary[m].estimatedCrawlD,'days']];
+  const matrix=[['리스팅 VI',m=>r.summary[m].vi,'integer'],['리스팅 VI/d',m=>r.summary[m].listingRate,''],['크롤링 VI',m=>r.summary[m].prepared,'integer'],['크롤링 비중 (리스팅 VI 기준)',m=>r.summary[m].share,'percent'],['전체 C/N 배수 중앙값',m=>r.examples[m].medianRatio,'ratio'],['작업한 요청 수',m=>r.summary[m].requests,'integer'],['준비+리스팅 총 d',m=>r.summary[m].complete?r.summary[m].totalD:'기록 확인 필요','days'],['크롤링 VI/d',m=>r.summary[m].crawlRate,'']];
   matrix.forEach((row,i)=>monthRow(10+i,row[0],row[1],row[2],[1,4,6].includes(i)));
   section(19,'02  작업자 사례 TOP 5 — C/N 우선, 부족 시 전월비·월 생산성 참고');
   months.forEach((m,i)=>{
@@ -230,8 +230,8 @@ function crhRender_(ss,r){
   text(end+1,1,12,'후반/전반 VI/d '+f(n.halfRatio,'ratio')+' | C비중 50% 미만 '+f(n.low.rate)+' VI/d ('+n.low.activeDays+'일) → 50% 이상 '+f(n.high.rate)+' VI/d ('+n.high.activeDays+'일), '+f(n.shareRatio,'ratio'),null,'#15364a',10).setFontWeight('bold');sheet.setRowHeight(end+1,28);
   const notes=[
     '9월 '+(r.september.start||'없음')+'부터 ('+r.september.method+'). C/N은 같은 날 혼합일 제외. 전체 C/N 평균은 개인별 배수의 산술평균, 중앙값은 개인별 배수의 중앙값.',
-    '요청 크기는 해당 월 작업한 고유 요청의 현재 Total VI 평균. 필요 d는 관측+추정 생산성에 이 크기를 적용한 모형값으로 실제 요청별 소요기간의 평균은 아님. 요청 크기 차이는 동일 크기 행으로 비교.',
-    '추정 크롤링 d는 누락 요청당 1일×현재 작업자 근무비율. 실제 세션의 사람·날짜는 중복 제거하고 추정분은 요청별로 추가. 관측 d와 추정 d를 합친 계획 기준이며 실측 노동시간은 아님.',
+    '요청 크기는 해당 월 작업한 고유 요청의 현재 Total VI 평균. 필요 d는 합산 생산성에 이 크기를 적용한 모형값으로 실제 요청별 소요기간의 평균은 아님. 요청 크기 차이는 동일 크기 행으로 비교.',
+    '크롤링 세션이 없으면 요청당 1일×현재 작업자 근무비율을 적용. 세션에서 계산한 값과 합쳐 총 d 하나로 표시. 작업시간이 아닌 근무일 기준 계획값.',
     '11월 일별 7일 VI/d는 최근 7개 달력일 합산 VI÷합산 d. 전반/후반 및 C비중 구간 비교는 관측 동행성으로, 작업자·난이도·배정 차이를 제거한 인과 효과가 아님.',
     '점검: VI 누락 '+r.quality.invalidListing+'행, 월 미귀속 준비 VI '+f(r.quality.unknownPreparedVi,'integer')+', 비율 미설정 '+r.quality.missingRatio.length+'명(기본 1). 개인 크롤링 제공자 비교 없음. 별도 실행 시만 갱신.'
   ];notes.forEach((note,i)=>{text(end+3+i,1,12,note,null,'#607087',8);sheet.setRowHeight(end+3+i,26);});sheet.getRange(1,1,height,12).setValues(grid);merges.forEach(args=>sheet.getRange(...args).merge());ss.setActiveSheet(sheet);

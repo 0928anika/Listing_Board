@@ -1,3 +1,7 @@
+일반 분석 최신 A009: Code.gs + Layout.gs 교체 후 refreshListingAnalytics 실행.
+2P·3P 분리 / 크롤링+리스팅 전체 효율 / 잔량 및 요청당 필요 d / 작업자 순위 탭.
+투입 계획 설정은 필요 없습니다. 상세: A009-UPDATE.md.
+
 일반 분석 최신 A008: Code.gs + Layout.gs 교체 후 refreshListingAnalytics 실행.
 비교·순위 VI/d 통일, h는 작업시간 탭에서 확인. CONFIG 근무비율 적용.
 상세: A008-UPDATE.md. 일회용 11월 보고는 변경 없음.

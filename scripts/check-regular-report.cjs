@@ -1,0 +1,41 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),ctx=vm.createContext({console});for(const file of ['Code.gs','Layout.gs'])vm.runInContext(fs.readFileSync('analytics-script/'+file,'utf8'),ctx);
+const day=s=>Date.parse(s+'T00:00:00Z')/86400000+25569;
+const rh=['Request ID','Node','Status','Requested At','Completed At','Started At','크롤링 단계','크롤링 작업자','Total VI','3P Completed VI','Request Type','Blocked Time (Hours)'];
+const sh=['Session ID','Worker','Request ID','Stage','Status','Started At','Ended At','Duration Minutes','Completed VI Delta'];
+const req=(id,total,done,stage,status='ONGOING',start='2026-11-02',blocked='')=>[id,'Node',status,day('2026-10-01'),status==='DONE'?day('2026-11-10'):'',start?day(start):'',stage,'Crawler',total,done,'3P Listing',blocked];
+const data={REQUESTS:[rh,req('C',1000,200,'CRAWL_COMPLETED'),req('N',500,100,''),req('P',500,0,'CRAWL_REQUESTED'),req('H',1000,0,'CRAWL_COMPLETED','ON HOLD'),req('D',1000,1000,'N/A','DONE','2026-10-02',48),req('L',500,0,'N/A')],WORK_SESSIONS:[sh]};data.REQUESTS.at(-1)[10]='2P Lite 전환';
+let id=0;const session=(worker,req,stage,date,vi,start=date)=>data.WORK_SESSIONS.push(['S'+(++id),worker,req,stage,'PAUSED',day(start),day(date),0,vi]);
+session('Crawler','C','CRAWL','2026-11-03','','2026-11-02');session('Crawler','C','CRAWL','2026-11-03','','2026-11-02');session('Lister','C','3P','2026-11-04',500);session('Lister','C','3P','2026-11-09',500);session('Lister','N','3P','2026-11-04',100);session('Lister','C','2P','2026-11-05',300);session('Lister','C','3P','2026-10-05',200);session('Lister','N','3P','2026-10-05',100);session('Lister','C','2P','2026-10-06',100);
+const config={external:new Set(),weights:{crawler:0.5,lister:0.5},minDays:1,min:1},build=d=>ctx.laBuild_(d||data,config,'2026-11-21'),out=build(),m=out._regular,layouts=ctx.laLayouts_(out),nov=m.monthly.find(r=>r.month==='2026-11');let count=0;function check(f){f();count++;}const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
+check(()=>assert.equal(nov.crawlD,1)); // observed duplicate date .5 + request H fallback .5
+check(()=>assert.equal(nov.crawlVI,2000));
+check(()=>assert.equal(nov.crawlRate,2000));
+check(()=>assert.equal(nov.listingD,1));
+check(()=>assert.equal(nov.totalD,2)); // explicit stage sum, including overlap
+check(()=>assert.equal(nov.totalRate,550));
+check(()=>assert.equal(nov.cVI,1000));
+check(()=>assert.equal(nov.cD,1));
+check(()=>assert.equal(nov.nVI,100)); // blank stage becomes N, not unknown
+check(()=>assert.equal(nov.nD,0.5));
+check(()=>assert.equal(nov.nRate,200));
+check(()=>assert.equal(m.average,750));
+check(()=>{const r=m.metrics['작업자 월별'].find(r=>r[0]==='2026-11');assert.equal(r[12],0.5);assert.equal(r[13],1);assert.equal(r[7],600);assert.equal(r[8],1100);});
+check(()=>close(m.current.crawlD,0.25));
+check(()=>close(m.current.listingD,3.3));
+check(()=>close(m.current.totalD,3.55));
+check(()=>close(m.current.heldD,1));
+check(()=>close(m.current.allD,4.55));
+check(()=>{const cost=m.costs.find(r=>r.month==='2026-11');close(cost.n1,3.75);close(cost.c1,1.125);close(cost.c5,5.625);close(cost.c10,11.25);});
+check(()=>{const top=layouts['투입 계획'][0];assert.equal(top.rows[0][1],4);assert.equal(top.rows[0][2],2700);close(top.rows[0][5],4.55);});
+check(()=>{const d=structuredClone(data);d.REQUESTS.push(req('Q',0,0,'N/A'));const o=build(d)._regular;assert.equal(o.backlog.manual.unknown,1);close(o.backlog.manual.vi,400+4500/7);});
+check(()=>{const d=structuredClone(data);d.WORK_SESSIONS.slice(1).forEach((r,i)=>r[7]=i%2?'':1000000);const changed=ctx.laLayouts_(build(d));for(const name of Object.keys(layouts))if(name!=='작업시간')assert.deepEqual(JSON.parse(JSON.stringify(changed[name])),JSON.parse(JSON.stringify(layouts[name])));});
+check(()=>{const s=layouts['월별 비교'].find(s=>s.title==='직전 달력기간 대비 3P·2P 생산성');assert.equal(s.rows[0][0],'2026-11');close(s.rows[0][3],1100/600-1);close(s.rows[0][6],2);});
+check(()=>{const list=layouts['주별 비교'];const matrix=list.filter(s=>s.rowFormats);assert.ok(matrix[0].headers[1]>matrix.at(-1).headers[1]);matrix.forEach(s=>assert.deepEqual(s.headers.slice(1,-1),s.headers.slice(1,-1).sort().reverse()));const changes=list.find(s=>s.title.startsWith('직전'));assert.deepEqual(changes.rows.map(r=>r[0]),changes.rows.map(r=>r[0]).sort().reverse());});
+check(()=>{for(const s of layouts['작업자 순위'].filter(s=>s.title.includes('순위')))assert.equal(s.formats[0],'0');assert.equal(layouts['작업자 월별'],undefined);});
+check(()=>{const text=JSON.stringify(layouts);for(const word of ['단계 완료','단계 VI','단계 합계','시간 미기록 행','홀드 기록 확인 필요','요청 전체 경과기간','시점 미확인','해석 및 집계 기준','확인 불가 VI','최근 7일','개인 평균 누락'])assert.ok(!text.includes(word),word);});
+check(()=>{const lead=layouts['월별 비교'].filter(s=>s.title.includes('리드타임'));assert.equal(lead.length,1);assert.equal(lead[0].rows[0][1],1);assert.equal(lead[0].rows[0][2],40);assert.equal(lead[0].rows[0][3],38);});
+check(()=>{const d=structuredClone(data);d.REQUESTS.push(req('Z',100,100,'N/A','DONE','2026-11-01',''));const lead=ctx.laLayouts_(build(d))['월별 비교'].find(s=>s.title.includes('리드타임'));assert.equal(lead.rows[0][1],2);assert.equal(lead.rows[0][4],1);assert.equal(lead.rows[0][3],38);});
+check(()=>{const d=structuredClone(data);d.REQUESTS.push(req('Z',100,0,'CRAWL_COMPLETED','ONGOING',''));const o=build(d);assert.equal(o._regular.undated,1);assert.ok(!JSON.stringify(ctx.laLayouts_(o)).includes('시점 미확인'));});
+check(()=>{for(const sections of Object.values(layouts))for(const s of sections){assert.ok(Object.keys(s.formats).every(i=>Number(i)<s.headers.length));for(const row of s.rows)assert.equal(row.length,s.headers.length);if(s.subheaders)assert.equal(s.subheaders.length,s.headers.length);}});
+check(()=>{const source=fs.readFileSync('analytics-script/Code.gs','utf8'),refresh=source.slice(source.indexOf('function refreshListingAnalytics(){'),source.indexOf('function installListingAnalyticsDaily(){'));assert.ok(!refresh.includes('laPlanConfig_'));});
+console.log(JSON.stringify({passed:count,failed:0,scope:'A009 stage separation, binary C/N, crawl fallback, workload effort, hold samples and weekly ordering; synthetic only'}));

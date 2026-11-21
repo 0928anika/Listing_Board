@@ -1,3 +1,7 @@
+일반 분석 최신 A008: Code.gs + Layout.gs 교체 후 refreshListingAnalytics 실행.
+비교·순위 VI/d 통일, h는 작업시간 탭에서 확인. CONFIG 근무비율 적용.
+상세: A008-UPDATE.md. 일회용 11월 보고는 변경 없음.
+
 11월 보고 최신: 전체 REQUESTS 평균 VI 고정, 비크롤링 1/5개·크롤링 1/5/10개 필요 d. 크롤링 방식은 크롤링+리스팅 d 합산. 주차 표는 완료 요청이 아닌 작업 기록 기준으로 명시.
 LeadershipReport.gs만 전체 교체 후 buildNovemberReport 실행.
 

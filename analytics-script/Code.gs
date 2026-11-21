@@ -1,11 +1,11 @@
-/** Listing Analytics A007. Bound to the analysis spreadsheet, never the source. */
-const LA_TABS=['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교','크롤링 효과','투입 계획'];
+/** Listing Analytics A008. Bound to the analysis spreadsheet, never the source. */
+const LA_TABS=['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교','크롤링 효과','투입 계획','작업시간'];
 function onOpen(){SpreadsheetApp.getUi().createMenu('누적 분석').addItem('초기 설정','setupListingAnalytics').addItem('전체 새로고침','refreshListingAnalytics').addItem('매일 자동 갱신 설치','installListingAnalyticsDaily').addToUi();}
 function setupListingAnalytics(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();let s=ss.getSheetByName('CONFIG');
   if(!s){s=ss.insertSheet('CONFIG');s.getRange(1,1,6,3).setValues([
     ['설정','값','설명'],['SOURCE_SPREADSHEET_ID','','운영 스프레드시트 ID 또는 URL'],
-    ['MIN_RANK_HOURS',1,'단계별 최소 누적 시간. 미만은 순위 제외'],
+    ['MIN_RANK_DAYS',1,'VI/d 순위의 최소 작업기록일. 근무비율 보정 전 날짜 수'],
     ['EXTERNAL_WORKER','','B열에 외부 지원 이름. 같은 키로 행 추가 가능'],
     ['EXTERNAL_WORKER','','공백 제거 후 대소문자 구분 없이 정확히 일치'],
     ['정책','전체 이력 재계산','외부 목록 변경은 과거 전체 기간에도 반영']]);s.setFrozenRows(1);s.autoResizeColumns(1,3);}
@@ -14,12 +14,12 @@ function setupListingAnalytics(){
 }
 function laConfig_(ss){
   const s=ss.getSheetByName('CONFIG');if(!s)throw Error('초기 설정을 먼저 실행하세요.');
-  const rows=s.getDataRange().getValues(), external=new Set();let id='',min=1;
-  rows.slice(1).forEach(r=>{if(r[0]==='SOURCE_SPREADSHEET_ID')id=String(r[1]||'').trim();if(r[0]==='MIN_RANK_HOURS'){min=Number(r[1]);if(!Number.isFinite(min)||min<0)throw Error('MIN_RANK_HOURS는 0 이상의 숫자여야 합니다.');}if(r[0]==='EXTERNAL_WORKER'&&String(r[1]||'').trim())external.add(laName_(r[1]));});
+  const rows=s.getDataRange().getValues(), external=new Set();let id='',min=1,minDays=1;
+  rows.slice(1).forEach(r=>{if(r[0]==='SOURCE_SPREADSHEET_ID')id=String(r[1]||'').trim();if(r[0]==='MIN_RANK_DAYS'){minDays=Number(r[1]);if(!Number.isInteger(minDays)||minDays<1)throw Error('MIN_RANK_DAYS는 1 이상의 정수여야 합니다.');}if(r[0]==='EXTERNAL_WORKER'&&String(r[1]||'').trim())external.add(laName_(r[1]));});
   const match=id.match(/\/d\/([\w-]+)/);if(match)id=match[1];
   if(!/^[\w-]{20,}$/.test(id)||id===ss.getId())throw Error('별도 운영 파일의 올바른 ID를 입력하세요. 분석 파일 자체는 원본으로 사용할 수 없습니다.');
   const weights={};rows.slice(1).forEach(r=>{const name=laName_(r[6]);if(!name)return;const ratio=r[7]===''||r[7]===undefined?1:Number(r[7]);if(!Number.isFinite(ratio)||ratio<=0||ratio>1)throw Error('근무비율은 0 초과 1 이하: '+r[6]);if(Object.prototype.hasOwnProperty.call(weights,name))throw Error('근무비율 작업자 중복: '+r[6]);weights[name]=ratio;});
-  return {id:id,min:min,external:external,weights:weights};
+  return {id:id,min:min,minDays:minDays,external:external,weights:weights};
 }
 function laPrepareWeights_(ss){const s=ss.getSheetByName('CONFIG');if(!s)return;if(s.getMaxColumns()<9)s.insertColumnsAfter(s.getMaxColumns(),9-s.getMaxColumns());const header=s.getRange('G1:I1').getValues()[0];if(header.every(v=>v===''))s.getRange('G1:I2').setValues([['작업자','근무비율','설명'],['',1,'기본 1 / 절반 0.5. 이름은 Worker와 동일하게 입력']]);else if(header[0]!=='작업자'||header[1]!=='근무비율')throw Error('CONFIG G:I에 다른 데이터가 있습니다. 빈 영역으로 옮긴 후 실행하세요.');}
 function laName_(v){return String(v||'').trim().toLowerCase();}
@@ -53,8 +53,8 @@ function laBuild_(data,c,today){
     if(aggregate&&status!=='COMMITTED')return;if(!aggregate&&status==='ACTIVE'){warn('ACTIVE 제외',id,worker);return;}if(stage!=='3P'&&stage!=='2P')return;
     const day=aggregate?String(v('Work Date')||''):laDay_(v('Ended At'));
     if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!worker||!id){warn('식별값/종료일 누락',id,worker);return;}
-    const delta=v('Completed VI Delta'),rawMinutes=v('Duration Minutes');
-    if(!laNumber_(delta)){warn('VI/시간 누락 또는 오류',id,worker+' '+day);return;}
+    const rawDelta=v('Completed VI Delta'),knownVi=laNumber_(rawDelta),delta=knownVi?rawDelta:0,rawMinutes=v('Duration Minutes');
+    if(!knownVi)warn('VI/시간 누락 또는 오류',id,worker+' '+day+' (VI 누락: 실적 분자 제외, 기록일 포함)');
     const minutes=laNumber_(rawMinutes)&&rawMinutes>=0?rawMinutes:0;
     if(!laNumber_(rawMinutes)||rawMinutes<0)warn('VI/시간 누락 또는 오류',id,worker+' '+day+' (일 기준 실적은 포함, 시간은 제외)');
     if(day>today){warn('미래 기록 제외',id,day);return;}
@@ -63,7 +63,7 @@ function laBuild_(data,c,today){
     else {const key=String(v('Session ID')||'');if(key){if(seen.has(key))throw Error('중복 Session ID: '+key);seen.add(key);}else warn('수기 세션 포함',id,worker+' '+day);rawGroups.add(group);}
     if(!req[id])warn('요청 없는 세션 포함',id,worker);
     if(minutes===0&&delta!==0)warn('시간 0 실적',id,worker+' '+day+' VI='+delta);
-    sessions.push({id:id,worker:worker,name:laName_(worker),stage:stage,day:day,delta:delta,hours:minutes/60,ratio:Object.prototype.hasOwnProperty.call(c.weights||{},laName_(worker))?c.weights[laName_(worker)]:1,external:c.external.has(laName_(worker)),node:req[id]?req[id].node:'미지정',crawl:laCrawlClass_(crawlMeta[id])});
+    sessions.push({id:id,worker:worker,name:laName_(worker),stage:stage,day:day,delta:delta,hours:minutes/60,viKnown:knownVi,ratio:Object.prototype.hasOwnProperty.call(c.weights||{},laName_(worker))?c.weights[laName_(worker)]:1,external:c.external.has(laName_(worker)),node:req[id]?req[id].node:'미지정',crawl:laCrawlClass_(crawlMeta[id])});
   }
   const st=laTable_(data.WORK_SESSIONS,['Session ID','Worker','Request ID','Stage','Status','Ended At','Duration Minutes','Completed VI Delta'],'WORK_SESSIONS');st.rows.forEach(r=>add(r,st.h,false));
   if(data.LONG_TERM_SESSIONS){const lt=laTable_(data.LONG_TERM_SESSIONS,['Aggregate ID','Status','Request ID','Worker','Stage','Work Date','Duration Minutes','Completed VI Delta'],'LONG_TERM_SESSIONS');lt.rows.forEach(r=>add(r,lt.h,true));}else warn('장기 집계 없음','','과거 백업 세션 포함 여부를 확인하세요. 상세 아카이브는 합산하지 않습니다.');
@@ -74,7 +74,7 @@ function laBuild_(data,c,today){
   function rows(gs){const ranks={};['3','2'].forEach(stage=>{const periods={};gs.forEach(g=>{if(g['h'+stage]>0&&g['h'+stage]>=c.min)(periods[g.period]||(periods[g.period]=[])).push(g);});Object.keys(periods).forEach(p=>{let prev=null,rank=0;periods[p].sort((a,b)=>b['v'+stage]/b['h'+stage]-a['v'+stage]/a['h'+stage]).forEach((g,i)=>{const rate=g['v'+stage]/g['h'+stage];if(rate!==prev)rank=i+1;prev=rate;ranks[JSON.stringify([p,g.worker,stage])]=rank;});});});return gs.map(g=>[g.period,g.worker,g.v3,g.v2,g.v3+g.v2,g.h3,g.h2,g.h3+g.h2,g.h3>0?g.v3/g.h3:'',g.h2>0?g.v2/g.h2:'',g.days.size,g.requests.size,ranks[JSON.stringify([g.period,g.worker,'3'])]||'',ranks[JSON.stringify([g.period,g.worker,'2'])]||'']);}
   const internal=sessions.filter(s=>!s.external),external=sessions.filter(s=>s.external),tabs={};
   tabs._workerDays=laWorkerDays_(sessions,c.weights||{});
-  tabs._dayProductivity=laDayProductivity_(sessions);
+  tabs._dayProductivity=laDayProductivity_(sessions);tabs._recordedTime=laRecordedTime_(data,c,today);tabs._minRankDays=c.minDays||1;tabs._today=today;
   tabs._crawl=laCrawlAnalysis_(data,sessions,today);
   tabs._crawl.preparation=laCrawlPreparation_(data,today);
   tabs._crawl.monthlyPreparation=laCrawlMonthly_(data,today,c.weights||{});
@@ -90,7 +90,7 @@ function laBuild_(data,c,today){
   // Keep request-level samples so cross-month medians are never averaged.
   tabs._monthlyLeadTime=Object.values(req).filter(r=>r.status==='DONE'&&r.completed&&r.completed<=today&&laNumber_(r.start)&&laNumber_(r.end)&&r.end>=r.start).map(r=>{const hours=(r.end-r.start)*24,valid=laNumber_(r.blocked)&&r.blocked>=0&&r.blocked<=hours;return {month:r.completed.slice(0,7),node:r.node,hours:hours,blocked:valid?r.blocked:null,adjusted:valid?hours-r.blocked:null};});
   c.external.forEach(n=>{if(!sessions.some(s=>s.name===n))warn('외부 이름 매칭 없음',n,'기간/이름 표기를 확인하세요.');});
-  tabs['데이터 점검']=[['항목','Request/작업자','설명'],[['원본 범위','','REQUESTS + WORK_SESSIONS + COMMITTED LONG_TERM_SESSIONS. 상세 아카이브 직접 합산 안 함'],['외부 제외 정책','','외부 목록은 과거 전체에 소급. 내부 VI/시간/순위에서 제외. 요청 접수/완료는 전체 업무량'],['기간 정책','','Asia/Seoul, 종료일 귀속, 월요일 시작, 월력 기준. ACTIVE 제외'],['기록일 정책','','세션 종료일의 고유 일수. 출근일 아님'],['순위 정책','','단계별 합산 VI/합산 시간, 최소 '+c.min+'시간, 동률 공동순위. 전체 재계산'],['원본 한계','','현재 Request Node 기준. 과거 월말 상태 및 당시 Node는 복원하지 않음']].concat(issues)];return tabs;
+  tabs['데이터 점검']=[['항목','Request/작업자','설명'],[['원본 범위','','REQUESTS + WORK_SESSIONS + COMMITTED LONG_TERM_SESSIONS. 상세 아카이브 직접 합산 안 함'],['외부 제외 정책','','외부 목록은 과거 전체에 소급. 내부 VI/시간/순위에서 제외. 요청 접수/완료는 전체 업무량'],['기간 정책','','Asia/Seoul, 종료일 귀속, 월요일 시작, 월력 기준. ACTIVE 제외'],['기록일 정책','','세션 종료일의 고유 일수. 출근일 아님'],['순위 정책','','단계별 VI/보정 기록일 d, 최소 '+(c.minDays||1)+'기록일, 동률 공동순위. h는 확인용'],['원본 한계','','현재 Request Node 기준. 과거 월말 상태 및 당시 Node는 복원하지 않음']].concat(issues)];return tabs;
 }
 // Classification intentionally uses current stage only, per the reporting contract.
 function laCrawlMeta_(rows){
@@ -106,10 +106,26 @@ function laCrawlClass_(m){
   return '단계 미입력/미완료/기타';
 }
 function laDayProductivity_(sessions){
-  const maps={};['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','Node별','내부·외부 비교'].forEach(n=>maps[n]=new Map());
-  function add(name,period,label,s){const key=JSON.stringify([period,label]),map=maps[name];if(!map.has(key))map.set(key,{period:period,label:label,v2:0,v3:0,days:new Set(),equiv:0});const g=map.get(key),d=JSON.stringify([s.name,s.day]);if(!g.days.has(d)){g.days.add(d);g.equiv+=s.ratio||1;}g[s.stage==='2P'?'v2':'v3']+=s.delta;}
-  sessions.forEach(s=>{const month=s.day.slice(0,7);add('내부·외부 비교',month,s.external?'외부 지원':'내부',s);if(s.external){add('외부 지원',month,s.worker,s);return;}add('월별 비교',month,'내부 전체',s);add('주별 비교',laWeek_(s.day),'내부 전체',s);add('작업자 월별',month,s.worker,s);add('일별 기록',s.day,s.worker,s);add('Node별',month,s.node,s);});
-  const result={};Object.keys(maps).forEach(n=>result[n]=Array.from(maps[n].values()).sort((a,b)=>b.period.localeCompare(a.period)||a.label.localeCompare(b.label)).map(g=>[g.period,g.label,g.v2,g.v3,g.v2+g.v3,g.days.size,g.equiv,g.equiv?g.v2/g.equiv:'',g.equiv?g.v3/g.equiv:'',g.equiv?(g.v2+g.v3)/g.equiv:'']));return result;
+  const maps={};['월별 비교','주별 비교','작업자 월별','일별 기록','외부 지원','외부 주별','외부 일별','Node별','내부·외부 비교'].forEach(n=>maps[n]=new Map());
+  function add(name,period,label,s){const key=JSON.stringify([period,['작업자 월별','일별 기록','외부 지원','외부 주별','외부 일별'].includes(name)?laName_(label):label]),map=maps[name];if(!map.has(key))map.set(key,{period:period,label:label,v2:0,v3:0,days:new Set(),d2:new Set(),d3:new Set(),equiv:0});const g=map.get(key),d=JSON.stringify([s.name,s.day]);if(!g.days.has(d)){g.days.add(d);g.equiv+=s.ratio||1;}g[s.stage==='2P'?'d2':'d3'].add(d);g[s.stage==='2P'?'v2':'v3']+=s.delta;}
+  sessions.forEach(s=>{const month=s.day.slice(0,7);add('내부·외부 비교',month,s.external?'외부 지원':'내부',s);if(s.external){add('외부 지원',month,s.worker,s);add('외부 주별',laWeek_(s.day),s.worker,s);add('외부 일별',s.day,s.worker,s);return;}add('월별 비교',month,'내부 전체',s);add('주별 비교',laWeek_(s.day),'내부 전체',s);add('작업자 월별',month,s.worker,s);add('일별 기록',s.day,s.worker,s);add('Node별',month,s.node,s);});
+  const result={};Object.keys(maps).forEach(n=>result[n]=Array.from(maps[n].values()).sort((a,b)=>b.period.localeCompare(a.period)||a.label.localeCompare(b.label)).map(g=>[g.period,g.label,g.v2,g.v3,g.v2+g.v3,g.days.size,g.equiv,g.equiv?g.v2/g.equiv:'',g.equiv?g.v3/g.equiv:'',g.equiv?(g.v2+g.v3)/g.equiv:'',g.d2.size,g.d3.size]));return result;
+}
+function laRecordedTime_(data,c,today){
+  const monthly=new Map(),daily=new Map();
+  function add(rows,aggregate){
+    if(!rows||!rows.length)return;const h={};rows[0].forEach((v,i)=>h[v]=i);
+    rows.slice(1).forEach(r=>{
+      const v=n=>r[h[n]],stage=String(v('Stage')||''),status=String(v('Status')||''),worker=String(v('Worker')||'').trim(),name=laName_(worker);
+      if(!worker||!['2P','3P','CRAWL'].includes(stage)||aggregate&&(status!=='COMMITTED'||stage==='CRAWL')||!aggregate&&status==='ACTIVE')return;
+      const day=aggregate?String(v('Work Date')||''):laDay_(v('Ended At'));if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||day>today)return;
+      const minutes=v('Duration Minutes'),valid=laNumber_(minutes)&&minutes>=0;
+      [[monthly,day.slice(0,7)],[daily,day]].forEach(([map,period])=>{const key=JSON.stringify([period,name]);if(!map.has(key))map.set(key,{period,worker,external:c.external.has(name),crawl:0,h3:0,h2:0,missing:0});const g=map.get(key);if(valid)g[stage==='CRAWL'?'crawl':stage==='3P'?'h3':'h2']+=minutes/60;else g.missing++;});
+    });
+  }
+  add(data.WORK_SESSIONS,false);add(data.LONG_TERM_SESSIONS,true);
+  const output=map=>Array.from(map.values()).sort((a,b)=>b.period.localeCompare(a.period)||a.worker.localeCompare(b.worker)).map(g=>[g.period,g.worker,g.external?'외부 지원':'내부',g.crawl,g.h3,g.h2,g.crawl+g.h3+g.h2,g.missing]);
+  return {monthly:output(monthly),daily:output(daily)};
 }
 function laCrawlBucket_(){return {vi:0,hours:0,timedVi:0,untimedVi:0,requests:new Set(),records:0,dayKeys:new Set(),equivalentDays:0};}
 function laCrawlAdd_(g,s){const dayKey=JSON.stringify([s.name,s.day]);if(!g.dayKeys.has(dayKey)){g.dayKeys.add(dayKey);g.equivalentDays+=s.ratio||1;}g.vi+=s.delta;g.records++;g.requests.add(s.id);if(s.hours>0){g.hours+=s.hours;g.timedVi+=s.delta;}else g.untimedVi+=s.delta;}
@@ -264,7 +280,7 @@ function refreshListingAnalytics(){
     ['작업자 주별','데이터 점검'].forEach(n=>{const s=ss.getSheetByName(n);if(s)ss.deleteSheet(s);});
     const notices=tabs['데이터 점검'][1].slice(6);console.log(JSON.stringify({analyticsNotices:notices}));
     ss.getSheetByName('CONFIG').getRange('E5:F5').setValues([['집계 참고사항 수',notices.length]]);
-    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A007']]);
+    const cfg=ss.getSheetByName('CONFIG');cfg.getRange('E1:F3').setValues([['갱신 상태','성공'],['최종 성공(KST)',Utilities.formatDate(now,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')],['버전','A008']]);
   }catch(e){const cfg=ss.getSheetByName('CONFIG');if(cfg)cfg.getRange('E1:F1').setValues([['갱신 상태','실패: '+e.message]]);throw e;}finally{lock.releaseLock();}
 }
 function installListingAnalyticsDaily(){

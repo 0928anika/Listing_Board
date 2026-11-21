@@ -62,7 +62,7 @@ check(()=>{
  let writes=0;const sheets=new Map();
  function sheet(){return {getMaxRows:()=>10000,getMaxColumns:()=>200,getRange(...args){const n=args[2],m=args[3];let range;range=new Proxy({}, {get(_,method){if(method==='getMergedRanges')return ()=>[];if(method==='setValues')return values=>{assert.equal(values.length,n);assert.ok(values.every(r=>r.length===m));writes++;return range;};return ()=>range;}});return range;},setHiddenGridlines(){},setFrozenRows(){},setFrozenColumns(){},setTabColor(){},setColumnWidth(){},setColumnWidths(){},setRowHeights(){},setRowHeight(){},clear(){}};}
  ctx.laRenderReports_({getSheetByName:n=>sheets.get(n),insertSheet:n=>{const s=sheet();sheets.set(n,s);return s;}},layouts,'2026-11-20 12:00:00');
- assert.equal(sheets.size,9);assert.ok(writes>50);
+ assert.equal(sheets.size,10);assert.ok(writes>50);
 });
 check(()=>{
  let sheet=null,stored=[],writes=0;

@@ -1,3 +1,6 @@
+11월 보고 최신: 요청 1/5/10개당 d, 요청당 1일 추정 크롤링 d, TOP 5 아래 전체 통계, 11월 일별 심층.
+LeadershipReport.gs만 교체 후 buildNovemberReport 실행. 자세한 기준은 NOVEMBER-REPORT.md.
+
 일회용 11월 보고 최신 업데이트: NOVEMBER-REPORT.md
 LeadershipReport.gs만 전체 교체 후 buildNovemberReport 실행.
 기존 자동 생성 탭을 11월 보고로 변경합니다. 일반 새로고침과 분리됩니다.

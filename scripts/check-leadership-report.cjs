@@ -58,7 +58,7 @@ check(()=>{let touched=false;assert.throws(()=>ctx.crhRender_({getSheetByName:()
 check(()=>{
  const d=structuredClone(data);d.REQUESTS[0].push('Started At');d.REQUESTS.slice(1).forEach(r=>r.push(serial(r[0].startsWith('09')?'2026-09-01':r[0].startsWith('10')?'2026-10-01':'2026-11-01')));
  d.WORK_SESSIONS=d.WORK_SESSIONS.filter(r=>r[3]!=='CRAWL'||serial('2026-11-01')<=r[6]);const out=ctx.crhBuild_(d,config,options);
- assert.equal(out.summary['2026-09'].prepared,100);assert.equal(out.summary['2026-10'].prepared,200);assert.equal(out.summary['2026-10'].fallbackVi,200);assert.equal(out.summary['2026-10'].fallbackRequests,1);assert.equal(out.summary['2026-10'].crawlers,1);assert.equal(out.summary['2026-10'].crawlD,0);assert.equal(out.summary['2026-10'].crawlRate,null);assert.equal(out.totalGrowth,null);assert.equal(out.summary['2026-11'].fallbackRequests,0);
+ assert.equal(out.summary['2026-09'].prepared,100);assert.equal(out.summary['2026-10'].prepared,200);assert.equal(out.summary['2026-10'].fallbackVi,200);assert.equal(out.summary['2026-10'].fallbackRequests,1);assert.equal(out.summary['2026-10'].crawlers,1);assert.equal(out.summary['2026-10'].crawlD,1);assert.equal(out.summary['2026-10'].estimatedCrawlD,1);assert.equal(out.summary['2026-10'].crawlRate,200);assert.equal(typeof out.totalGrowth,'number');assert.equal(out.summary['2026-11'].fallbackRequests,0);
 });
 check(()=>{
  const d=structuredClone(data);d.REQUESTS[0].push('Started At','Requested At');d.REQUESTS[1].push(serial('2026-10-05'),serial('2026-09-01'));d.WORK_SESSIONS=d.WORK_SESSIONS.filter(r=>!(r[2]==='09C'&&r[3]==='CRAWL'));const out=ctx.crhBuild_(d,config,options);assert.equal(out.summary['2026-09'].prepared,0);assert.equal(out.summary['2026-10'].prepared,300);
@@ -89,12 +89,35 @@ check(()=>assert.equal(examples['2026-11'].rows[0].manualRate,200));
 check(()=>assert.equal(examples['2026-11'].rows.at(-1).worker,'W2'));
 check(()=>assert.equal(examples['2026-09'].rows.length,0));
 check(()=>assert.throws(()=>ctx.crhExamples_(exampleRecords,exampleRequests,config,0),/exampleMinDays/));
+check(()=>{assert.equal(report.requestCosts['2026-11'].averageVi,1100/3);assert.equal(report.requestCosts['2026-11'].sizeSample,3);assert.ok(Math.abs(report.requestCosts['2026-11'].totalPerRequest-3.5/3)<1e-10);assert.ok(Math.abs(report.requestCosts['2026-11'].five-3.5/3*5)<1e-10);assert.ok(Math.abs(report.requestCosts['2026-11'].ten-3.5/3*10)<1e-10);});
+check(()=>{const row=report.requestCosts['2026-10'];assert.equal(row.averageVi,1300/3);assert.equal(row.totalPerRequest,1);assert.ok(Math.abs(row.sameSizePerRequest-(1100/3)/(1300/3))<1e-10);});
+check(()=>{
+ const d=structuredClone(data);d.REQUESTS[0].push('Started At');d.REQUESTS.slice(1).forEach(r=>r.push(serial(r[0].startsWith('09')?'2026-09-01':r[0].startsWith('10')?'2026-10-01':'2026-11-01')));d.WORK_SESSIONS=d.WORK_SESSIONS.filter(r=>r[3]!=='CRAWL');
+ const out=ctx.crhBuild_(d,{...config,weights:{...config.weights,crawlera:0.5}},options);assert.equal(out.summary['2026-10'].estimatedCrawlD,0.5);assert.equal(out.summary['2026-10'].crawlRate,400);assert.equal(out.summary['2026-11'].estimatedCrawlD,1.5);assert.equal(out.summary['2026-11'].totalD,4);assert.equal(out.summary['2026-11'].complete,true);
+});
+check(()=>{
+ const d=structuredClone(data);d.REQUESTS[0].push('Started At');d.REQUESTS.push(['EX1','N','B','CRAWL_COMPLETED','CrawlerA',100,serial('2026-11-04')],['EX2','N','B','CRAWL_COMPLETED','CrawlerA',100,serial('2026-11-04')]);const out=ctx.crhBuild_(d,{...config,weights:{...config.weights,crawlera:0.5}},options);assert.equal(out.summary['2026-11'].estimatedCrawlD,1);assert.equal(out.summary['2026-11'].estimatedRequests,2);assert.equal(out.summary['2026-11'].totalD,4);
+});
+check(()=>assert.equal(report.november.rows.length,20));
+check(()=>assert.equal(report.november.rows[0][1],1));
+check(()=>assert.equal(report.november.rows[2][1],0));
+check(()=>assert.equal(report.november.rows[2][4],440));
+check(()=>assert.equal(report.november.rows[9][4],null));
+check(()=>assert.equal(report.november.high.rate,500));
+check(()=>assert.equal(report.november.low.rate,200));
+check(()=>assert.equal(report.november.shareRatio,2.5));
+check(()=>{assert.equal(report.examples['2026-11'].workerCount,2);assert.equal(report.examples['2026-11'].rows.length,2);assert.equal(report.examples['2026-11'].eligible,1);assert.equal(report.examples['2026-11'].medianRatio,4.5);assert.equal(report.examples['2026-11'].meanRatio,4.5);assert.ok(report.examples['2026-11'].rows.some(r=>r.kind==='월 생산성 참고'&&r.ratio===null));});
+check(()=>{const rows=exampleRecords.filter(s=>s.day!=='2026-11-02'&&s.day!=='2026-11-04');const out=ctx.crhExamples_(rows,exampleRequests,config,2)['2026-11'];assert.equal(out.rows.length,5);assert.equal(out.smallSample,7);assert.equal(out.rows[0].kind,'C/N·소표본');});
+check(()=>{
+ const records=[];for(let i=0;i<6;i++){records.push({worker:'P'+i,name:'p'+i,id:'C',day:'2026-10-01',vi:100,valid:true},{worker:'P'+i,name:'p'+i,id:'C',day:'2026-11-01',vi:200+i*10,valid:true});}
+ const out=ctx.crhExamples_(records,exampleRequests,config,2)['2026-11'];assert.equal(out.rows.length,5);assert.equal(out.eligible,0);assert.equal(out.rows[0].kind,'전월비');assert.equal(out.rows[0].worker,'P5');assert.equal(out.rows[0].ratio,2.5);assert.equal(out.meanRate,225);assert.equal(out.medianRate,225);
+});
 check(()=>{const source=fs.readFileSync('analytics-script/Code.gs','utf8');assert.ok(!source.includes('buildCrawlerHubLeadershipReport'));assert.ok(!source.includes('Crawler Hub 리더 보고'));});
 // Layout QA: bounded single-tab grid, no overlapping merges or personal comparisons.
 check(()=>{
- const texts=[],occupied=new Set();let inserts=0,renames=0;
- const sheet={setName:name=>{assert.equal(name,'11월 보고');renames++;},getMaxRows:()=>50,getMaxColumns:()=>12,getRange(...args){if(typeof args[0]==='string')return {getValue:()=> 'CRAWLER HUB | IMPACT REVIEW'};const [row,col,n=1,m=1]=args;assert.ok(row+n-1<=50&&col+m-1<=12);let range;range=new Proxy({}, {get(_,method){if(method==='getMergedRanges')return ()=>[];if(method==='merge')return ()=>{for(let y=row;y<row+n;y++)for(let x=col;x<col+m;x++){const key=y+':'+x;assert.equal(occupied.has(key),false,'overlapping cell '+key);occupied.add(key);}return range;};if(method==='setValue')return value=>{texts.push(String(value));return range;};return ()=>range;}});return range;},clear(){},setColumnWidths(){},setRowHeights(){},setHiddenGridlines(){},setFrozenRows(){},setTabColor(){},setRowHeight(){}};
+ const texts=[],occupied=new Set();let inserts=0,renames=0,writes=0;
+ const sheet={setName:name=>{assert.equal(name,'11월 보고');renames++;},getMaxRows:()=>80,getMaxColumns:()=>12,getRange(...args){if(typeof args[0]==='string')return {getValue:()=> 'CRAWLER HUB | IMPACT REVIEW'};const [row,col,n=1,m=1]=args;assert.ok(row+n-1<=80&&col+m-1<=12);let range;range=new Proxy({}, {get(_,method){if(method==='getMergedRanges')return ()=>[];if(method==='merge')return ()=>{for(let y=row;y<row+n;y++)for(let x=col;x<col+m;x++){const key=y+':'+x;assert.equal(occupied.has(key),false,'overlapping cell '+key);occupied.add(key);}return range;};if(method==='setValues')return values=>{assert.equal(values.length,n);assert.ok(values.every(r=>r.length===m));writes++;texts.push(...values.flat().map(String));return range;};if(method==='setValue')return ()=>{throw Error('Unbatched cell write');};return ()=>range;}});return range;},clear(){},setColumnWidths(){},setRowHeights(){},setHiddenGridlines(){},setFrozenRows(){},setTabColor(){},setRowHeight(){}};
  ctx.crhRender_({getSheetByName:name=>name==='11월 보고'?null:sheet,insertSheet:()=>{inserts++;return sheet;},setActiveSheet:s=>assert.equal(s,sheet)},{...report,examples});
- assert.equal(renames,1);assert.equal(inserts,0);assert.ok(texts.includes('11월 보고 | CRAWLER HUB'));assert.ok(texts.some(t=>t.includes('W6')));assert.ok(texts.length>100);assert.ok(texts.every(t=>!t.includes('CrawlerA')&&!t.includes('CrawlerB')&&!t.includes('리더')&&!t.includes('VI/h')&&!t.includes('환산인일')&&!t.includes('등록')));
+ assert.equal(writes,1);assert.equal(renames,1);assert.equal(inserts,0);assert.ok(texts.includes('11월 보고 | CRAWLER HUB'));assert.ok(texts.some(t=>t.includes('W6')));assert.ok(texts.length>100);assert.ok(texts.every(t=>!t.includes('CrawlerA')&&!t.includes('CrawlerB')&&!t.includes('리더')&&!t.includes('VI/h')&&!t.includes('환산인일')&&!t.includes('등록')));
 });
 console.log(JSON.stringify({passed:count,failed:0,scope:'One-off team-month report, matched cohort, same-day union, no creator comparisons, top-5 listing examples, September coverage, partial month and one-page render bounds'}));

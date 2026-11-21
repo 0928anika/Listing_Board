@@ -1,3 +1,6 @@
+11월 보고: 월 전체 집계 차단 수정, 소표본 구분 제거, 중앙값 두 지표로 단순화, 크롤링 VI%/요청% 분리.
+LeadershipReport.gs만 교체 후 buildNovemberReport 실행.
+
 11월 보고 최신: 요청 1/5/10개당 d, 요청당 1일 추정 크롤링 d, TOP 5 아래 전체 통계, 11월 일별 심층.
 LeadershipReport.gs만 교체 후 buildNovemberReport 실행. 자세한 기준은 NOVEMBER-REPORT.md.
 

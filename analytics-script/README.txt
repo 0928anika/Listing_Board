@@ -1,3 +1,6 @@
+11월 보고 최신: 전체 REQUESTS 평균 VI 고정, 비크롤링 1/5개·크롤링 1/5/10개 필요 d. 크롤링 방식은 크롤링+리스팅 d 합산. 주차 표는 완료 요청이 아닌 작업 기록 기준으로 명시.
+LeadershipReport.gs만 전체 교체 후 buildNovemberReport 실행.
+
 11월 보고 최신: 월~일 주차별 요청 비중·VI·VI/d, 양쪽 2기록일 C/N TOP5, 전체 합계 C VI/d·N VI/d, 통합 VI/d, 비크롤링 기준 요청당 d.
 LeadershipReport.gs만 교체 후 buildNovemberReport 실행. 상세: NOVEMBER-REPORT.md
 

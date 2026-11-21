@@ -138,13 +138,12 @@ function crhSeptemberWindow_(records,setting){
   return {start:september[0]||null,method:'연속 기록 기준 미충족·첫 유효 기록부터 참고',activeDays:september.length};
 }
 function crhRequestCosts_(parsed,stats,summary,c,examples){
-  const result={};Object.keys(stats).forEach(month=>{
-    const sizes=Array.from(stats[month].worked,id=>parsed.requests[id]).filter(r=>r&&laNumber_(r.total)&&r.total>0).map(r=>r.total),average=sizes.length?sizes.reduce((a,b)=>a+b,0)/sizes.length:null,s=summary[month];
-    const listing=average!==null&&s.listingRate>0?average/s.listingRate:null,total=average!==null&&s.totalRate>0?average/s.totalRate:null;
-    const baseline=examples[month],manualD=baseline.totalND,manualRate=baseline.totalNRate;
-    result[month]={withoutCrawlRate:manualRate,withoutCrawlD:manualD,withoutCrawlRequests:baseline.totalNRequests,withoutCrawlPerRequest:average!==null&&manualRate>0?average/manualRate:null,averageVi:average,sizeSample:sizes.length,workedRequests:stats[month].worked.size,listingPerRequest:listing,totalPerRequest:total,five:total!==null?total*5:null,ten:total!==null?total*10:null};
-  });
-  const common=result['2026-11'].averageVi;Object.keys(result).forEach(month=>{const s=summary[month];result[month].sameSizePerRequest=common!==null&&s.totalRate>0?common/s.totalRate:null;});return result;
+  const all=Object.values(parsed.requests),sizes=all.filter(r=>laNumber_(r.total)&&r.total>=0).map(r=>r.total),average=sizes.length?sizes.reduce((n,v)=>n+v,0)/sizes.length:null,result={};
+  Object.keys(stats).forEach(month=>{
+    const rates=examples[month],crawlRate=summary[month].crawlRate,listingRate=rates.totalCRate,manualRate=rates.totalNRate;
+    const without=average!==null&&manualRate>0?average/manualRate:null,crawl=average!==null&&crawlRate>0?average/crawlRate:null,listing=average!==null&&listingRate>0?average/listingRate:null,total=crawl!==null&&listing!==null?crawl+listing:null;
+    result[month]={averageVi:average,sizeSample:sizes.length,sourceRequests:all.length,workedRequests:stats[month].worked.size,withoutCrawlRate:manualRate,withoutCrawlD:rates.totalND,withoutCrawlRequests:rates.totalNRequests,withoutCrawlPerRequest:without,withoutCrawlFive:without!==null?without*5:null,crawlRate,listingRate,crawlPerRequest:crawl,listingPerRequest:listing,totalPerRequest:total,five:total!==null?total*5:null,ten:total!==null?total*10:null};
+  });return result;
 }
 function crhExamples_(records,requests,c){
   const mode=(_,r)=>r&&r.stage==='CRAWL_COMPLETED'?'crawl':r&&r.stage==='N/A'?'manual':null,pure=crhPure_(records,requests,mode),groups=new Map(),all=new Map(),display=new Map(),rawModes=new Map(),result={};
@@ -156,7 +155,7 @@ function crhExamples_(records,requests,c){
   groups.forEach((g,key)=>{
     if(!g.crawl||!g.manual||g.crawl.days.size<2||g.manual.days.size<2)return;const [month,name]=JSON.parse(key),manualD=crhDays_(g.manual.days,c),crawlD=crhDays_(g.crawl.days,c),manualRate=crhRate_(g.manual.vi,manualD),crawlRate=crhRate_(g.crawl.vi,crawlD),ratio=crhRatio_(crawlRate,manualRate);if(ratio===null)return;
     const out=result[month];out.eligible++;out.ratios.push(ratio);out.totalCVi+=g.crawl.vi;out.totalNVi+=g.manual.vi;out.totalCD+=crawlD;out.totalND+=manualD;g.manual.requests.forEach(id=>out.nRequestIds.add(id));
-    if(ratio>1){out.improved++;out.candidates.push({worker:display.get(name),name,kind:'C/N',manualRate,crawlRate,ratio,manualD,crawlD,manualVi:g.manual.vi,crawlVi:g.crawl.vi});}
+    if(ratio>1)out.improved++;out.candidates.push({worker:display.get(name),name,kind:'C/N',manualRate,crawlRate,ratio,manualD,crawlD,manualVi:g.manual.vi,crawlVi:g.crawl.vi});
   });
   Object.keys(result).forEach(month=>{
     const out=result[month];out.candidates.sort((a,b)=>b.ratio-a.ratio||b.crawlVi-a.crawlVi||a.worker.localeCompare(b.worker));out.rows=out.candidates.slice(0,5);
@@ -202,24 +201,24 @@ function crhRender_(ss,r){
   months.forEach((m,i)=>{
     const col=1+i*4,g=r.examples[m];text(21,col,4,labels[i]+' · 월 전체 '+g.workerCount+'명 / C/N '+g.eligible+'명','#dce9ed',null,9).setFontWeight('bold');
     ['작업자','N VI/d','C VI/d','배수'].forEach((v,j)=>text(22,col+j,1,v,'#e7edf3',null,8));
-    for(let k=0;k<5;k++){const row=23+k,item=g.rows[k];sheet.setRowHeight(row,34);if(!item){text(row,col,4,'2일 기준 개선 사례 '+g.rows.length+'명','#ffffff','#9aa7b6',8);continue;}
-      text(row,col,1,item.worker+'\n'+item.kind,'#ffffff',null,8);text(row,col+1,1,item.manualRate===null?'—':f(item.manualRate),'#ffffff',null,8);text(row,col+2,1,f(item.crawlRate),'#ffffff',null,8);text(row,col+3,1,item.ratio===null?'참고':f(item.ratio,'ratio'),item.kind==='월 생산성 참고'?'#e7edf3':'#d7eddf','#1d6448',11).setFontWeight('bold');
+    for(let k=0;k<5;k++){const row=23+k,item=g.rows[k];sheet.setRowHeight(row,34);if(!item){text(row,col,4,'2일 기준 비교 사례 '+g.rows.length+'명','#ffffff','#9aa7b6',8);continue;}
+      text(row,col,1,item.worker+'\n'+item.kind,'#ffffff',null,8);text(row,col+1,1,item.manualRate===null?'—':f(item.manualRate),'#ffffff',null,8);text(row,col+2,1,f(item.crawlRate),'#ffffff',null,8);text(row,col+3,1,item.ratio===null?'참고':f(item.ratio,'ratio'),item.ratio<1?'#f9e3e3':item.ratio===1?'#e7edf3':'#d7eddf',item.ratio<1?'#a93e3e':'#1d6448',11).setFontWeight('bold');
     }
     text(28,col,4,'전체 C VI/d: '+f(g.totalCRate)+' · '+g.eligible+'명','#dce9ed',null,9);
     text(29,col,4,'전체 N VI/d: '+f(g.totalNRate)+' · '+g.eligible+'명','#dce9ed',null,9);
 
   });sheet.setRowHeight(28,30);sheet.setRowHeight(29,30);sheet.setRowHeight(30,29);
   text(31,1,12,'N=비크롤링, C=크롤링. 배수=C VI/d÷N VI/d. 양쪽 각각 2기록일 이상만 비교. 전체 C/N 값은 TOP 5가 아닌 기준 통과 전체 대상자의 각각 VI 합계÷각각 d 합계. 부족한 순위는 다른 기준으로 채우지 않음.',null,'#607087',8);sheet.setRowHeight(31,27);
-  section(32,'03  요청 몇 개에 몇 d가 필요한가? — 평균 요청 크기 기준 계획값');monthHeader(33,'작업한 요청의 현재 크기로 환산');
-  monthRow(34,'요청 1개 평균 VI (표본 요청 수)',m=>f(r.requestCosts[m].averageVi)+' VI · n='+r.requestCosts[m].sizeSample+'/'+r.requestCosts[m].workedRequests,'');
-  monthRow(35,'크롤링 없이 리스팅 · 요청 1개 필요 d',m=>r.requestCosts[m].withoutCrawlPerRequest===null?'비크롤링 비교 기록 없음':r.requestCosts[m].withoutCrawlPerRequest,'days');
-  monthRow(36,'크롤링+리스팅 · 요청 1개 필요 d',m=>r.requestCosts[m].totalPerRequest,'days',true);
-  monthRow(37,'크롤링+리스팅 · 요청 5개 필요 d',m=>r.requestCosts[m].five,'days',true);
-  monthRow(38,'크롤링+리스팅 · 요청 10개 필요 d',m=>r.requestCosts[m].ten,'days');
-  monthRow(39,'동일 크기 비교 · 11월 평균 VI의 요청 1개',m=>r.requestCosts[m].sameSizePerRequest,'days');
-  text(40,1,12,'크롤링 없는 d=평균 요청 VI÷2번 전체 N VI/d. 현 방식 d=평균 요청 VI÷해당 월 통합 VI/d. 크롤링 세션 없는 완료 요청은 Started At에 요청당 1일×CONFIG 비율을 추정 추가(동일 날짜 여러 요청도 각각 추정). 인원 배분·대기시간은 별도.',null,'#607087',8);sheet.setRowHeight(40,30);
-  section(42,'04  11월 주차별 — 리스팅 요청의 크롤링 비중·완료 VI·VI/d');
-  const headers=[['주차 · 월요일~일요일',1,4],['전체 요청',5,1],['크롤링 요청',6,1],['요청 비중',7,1],['완료 VI',8,2],['d',10,1],['VI/d',11,2]];
+  section(32,'03  같은 요청 크기에서 방법별 필요 d — 현재 시트 전체 평균 VI 고정');monthHeader(33,'같은 VI · 월별 속도 비교');
+  monthRow(34,'공통 요청 1개 평균 VI (전체 시트)',m=>f(r.requestCosts[m].averageVi)+' VI · n='+r.requestCosts[m].sizeSample+'/'+r.requestCosts[m].sourceRequests,'');
+  monthRow(35,'크롤링 없이 · 요청 1개 필요 d',m=>r.requestCosts[m].withoutCrawlPerRequest===null?'비크롤링 비교 기록 없음':r.requestCosts[m].withoutCrawlPerRequest,'days');
+  monthRow(36,'크롤링 없이 · 요청 5개 필요 d',m=>r.requestCosts[m].withoutCrawlFive,'days');
+  monthRow(37,'크롤링해서 · 요청 1개 필요 d',m=>r.requestCosts[m].totalPerRequest,'days',true);
+  monthRow(38,'크롤링해서 · 요청 5개 필요 d',m=>r.requestCosts[m].five,'days',true);
+  monthRow(39,'크롤링해서 · 요청 10개 필요 d',m=>r.requestCosts[m].ten,'days');
+  text(40,1,12,'공통 평균은 현재 REQUESTS의 숫자 Total VI 전체(0 포함, 빈칸·오류 제외). 크롤링 없이=공통 VI÷N VI/d. 크롤링해서=공통 VI÷크롤링 VI/d + 공통 VI÷C VI/d. 크롤링과 리스팅 d 모두 포함.',null,'#607087',8);sheet.setRowHeight(40,30);
+  section(42,'04  주간 리스팅 작업 요청 기준 — 크롤링 비중·처리 VI·VI/d');
+  const headers=[['주차 · 월요일~일요일',1,4],['작업 요청',5,1],['그중 크롤링',6,1],['요청 비중',7,1],['주간 처리 VI',8,2],['d',10,1],['VI/d',11,2]];
   headers.forEach(([label,col,width])=>text(43,col,width,label,'#dce9ed',null,8));
   const weeks=r.november.weeks,df=(v,style)=>v===null?'—':f(v,style);
   weeks.forEach((w,i)=>{const row=44+i,label=w.number===0?'전월 연결주 (11/1만)':('W'+w.number+' · '+w.start.slice(5).replace('-','/')+'~'+w.end.slice(5).replace('-','/')+(w.partial?' ('+w.through.slice(5).replace('-','/')+'까지)':''));
@@ -229,10 +228,10 @@ function crhRender_(ss,r){
   text(end,1,12,n.first&&n.last?'W1→W'+n.last.number+': 요청 크롤링 비중 '+(n.shareChange===null?'—':(n.shareChange*100).toFixed(1)+'%p')+' / VI/d '+df(n.growth,'ratio'):'11월 W1은 11/2부터 집계',null,'#15364a',11).setFontWeight('bold');sheet.setRowHeight(end,26);
   const notes=[
     '9월 '+(r.september.start||'없음')+'부터 ('+r.september.method+'). C/N은 같은 날 혼합일 제외. 전체 C/N은 양쪽 2일 기준 통과 인원 전체의 각각 VI 합계÷각각 d 합계. 개인별 평균·중앙값이 아님.',
-    '요청 크기는 해당 월 작업한 고유 요청의 현재 Total VI 평균. 필요 d는 합산 생산성에 이 크기를 적용한 모형값으로 실제 요청별 소요기간의 평균은 아님. 요청 크기 차이는 동일 크기 행으로 비교.',
+    '요청 크기는 현재 시트 전체 요청의 숫자 Total VI 평균을 모든 월에 동일 적용. 크롤링 방식 필요 d는 크롤링 단계와 C 리스팅 단계의 필요 d를 합산한 계획값이며 실제 요청별 경과일 평균은 아님.',
     '크롤링 세션이 없으면 요청당 1일×현재 작업자 근무비율을 적용. 세션에서 계산한 값과 합쳐 총 d 하나로 표시. 작업시간이 아닌 근무일 기준 계획값.',
-    'W1=11/2~11/8, 이후 월~일 단위. 진행 중 주는 기준일까지. 주간 VI/d=주간 합산 VI÷주간 합산 d. 같은 요청은 여러 날짜·작업자에 걸쳐도 주 내 1건. 주가 바뀌면 다시 셈.',
-    '주간 요청 비중=그 주 3P 작업기록이 있는 고유 요청 중 크롤링 요청 수÷전체 요청 수. 11/1 기록은 전월 연결주로 따로 표시. 월별 VI 비중과 주간 요청 건수 비중은 다를 수 있음.',
+    'W1=11/2~11/8, 이후 월~일 단위. 진행 중 주는 기준일까지. 크롤링 비중=그중 CRAWL_COMPLETED 요청 수÷작업 요청 수. 주간 VI/d=주간 처리 VI÷주간 d. 같은 요청은 여러 날짜·작업자에 걸쳐도 주 내 1건. 주가 바뀌면 다시 셈.',
+    '주간 작업 요청은 그 주에 3P 리스팅 기록이 있는 고유 요청 수이며 완료 요청 수가 아님. 미완료·다음 달 완료 요청도 그 주 작업하면 포함. 처리 VI는 그 주 세션의 순증 VI로 요청 전체 VI가 아님.',
     '월별 자료 점검: '+months.map(m=>m.slice(5)+'월 속성 확인 '+r.summary[m].unknownRequests+'건, VI 누락 '+r.summary[m].invalidVi+'행, 크롤링 연결 확인 '+r.summary[m].uncoveredCrawls+'건').join(' / ')+'. 월 전체 차단 없이 집계 가능한 기록 기준으로 계산.',
     '점검: VI 누락 '+r.quality.invalidListing+'행, 월 미귀속 크롤링 VI '+f(r.quality.unknownPreparedVi,'integer')+', 비율 미설정 '+r.quality.missingRatio.length+'명(기본 1). 개인 크롤링 제공자 비교 없음. 별도 실행 시만 갱신.'
   ];notes.forEach((note,i)=>{text(end+3+i,1,12,note,null,'#607087',8);sheet.setRowHeight(end+3+i,26);});sheet.getRange(1,1,height,12).setValues(grid);merges.forEach(args=>sheet.getRange(...args).merge());ss.setActiveSheet(sheet);

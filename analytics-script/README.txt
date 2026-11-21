@@ -1,3 +1,6 @@
+11월 보고 최신: 월~일 주차별 요청 비중·VI·VI/d, 양쪽 2기록일 C/N TOP5, 전체 합계 C VI/d·N VI/d, 통합 VI/d, 비크롤링 기준 요청당 d.
+LeadershipReport.gs만 교체 후 buildNovemberReport 실행. 상세: NOVEMBER-REPORT.md
+
 11월 보고: 월 전체 집계 차단 수정, 소표본 구분 제거, 중앙값 두 지표로 단순화, 크롤링 VI%/요청% 분리.
 LeadershipReport.gs만 교체 후 buildNovemberReport 실행.
 

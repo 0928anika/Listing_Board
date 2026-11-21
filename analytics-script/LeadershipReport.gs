@@ -1,7 +1,7 @@
 /** One-off November numeric dashboard. Never called by refreshListingAnalytics or a trigger. */
 const CRAWLER_HUB_REPORT_OPTIONS={
   asOf:'2026-11-21',
-  minRecordedDays:1,
+  minRecordedDays:2,
   septemberStart:'AUTO'
 };
 function buildCrawlerHubLeadershipReport(){return buildNovemberReport();}
@@ -79,7 +79,7 @@ function crhWorkerEffects_(records,requests,c,minDays){
   return {monthly:monthly,paired:{count:pairs.length,oct:crhMedian_(pairs.map(p=>p.oct)),nov:crhMedian_(pairs.map(p=>p.nov)),change:crhMedian_(pairs.map(p=>p.change))},mixed:pure.mixed};
 }
 function crhBuild_(data,c,o){
-  o=Object.assign({minRecordedDays:1,septemberStart:'AUTO'},o);const parsed=crhRead_(data,c,o);const september=crhSeptemberWindow_(parsed.records,o.septemberStart);const originalInside=parsed.inside;parsed.inside=day=>originalInside(day)&&(day.slice(0,7)!=='2026-09'||(september.start!==null&&day>=september.start));parsed.records=parsed.records.filter(s=>parsed.inside(s.day));const months=['2026-09','2026-10','2026-11'],stats={},comparable={},latest=new Map(),anyCrawl=new Map(),coveredCrawl=new Set();
+  o=Object.assign({minRecordedDays:2,septemberStart:'AUTO'},o);const parsed=crhRead_(data,c,o);const september=crhSeptemberWindow_(parsed.records,o.septemberStart);const originalInside=parsed.inside;parsed.inside=day=>originalInside(day)&&(day.slice(0,7)!=='2026-09'||(september.start!==null&&day>=september.start));parsed.records=parsed.records.filter(s=>parsed.inside(s.day));const months=['2026-09','2026-10','2026-11'],stats={},comparable={},latest=new Map(),anyCrawl=new Map(),coveredCrawl=new Set();
   months.forEach(m=>{stats[m]=crhNewMonth_();comparable[m]=crhNewMonth_();});
   const dayLimit=Number(o.asOf.slice(8,10));
   parsed.crawlRecords.forEach(s=>{
@@ -115,7 +115,7 @@ function crhBuild_(data,c,o){
   ];
   const growth=crhRatio_(summary['2026-11'].listingRate,summary['2026-10'].listingRate),totalGrowth=crhRatio_(summary['2026-11'].totalRate,summary['2026-10'].totalRate);
   const quality={invalidListing:parsed.quality.invalidListing,missingCrawlDate:parsed.quality.missingCrawlDate,unknownPreparedVi:parsed.quality.unknownPreparedVi,missingRatio:Array.from(parsed.quality.missingRatio),missingCreator:Array.from(parsed.quality.missingCreator),mixedComparisonRecords:effects.mixed};
-  return {asOf:o.asOf,september:september,examples:examples,effectCounts:Object.fromEntries(months.map(m=>[m,(effects.monthly.get(m)||[]).length])),summary:summary,matchedPeriod:matchedPeriod,monthlyRows:monthlyRows,paired:effects.paired,cohort:cohort,requestCosts:crhRequestCosts_(parsed,stats,summary),november:crhNovember_(parsed,c,o),holdCounts:months.map(m=>hold[m].length),growth:growth,totalGrowth:totalGrowth,quality:quality};
+  return {asOf:o.asOf,september:september,examples:examples,effectCounts:Object.fromEntries(months.map(m=>[m,(effects.monthly.get(m)||[]).length])),summary:summary,matchedPeriod:matchedPeriod,monthlyRows:monthlyRows,paired:effects.paired,cohort:cohort,requestCosts:crhRequestCosts_(parsed,stats,summary,c,examples),november:crhNovember_(parsed,c,o),holdCounts:months.map(m=>hold[m].length),growth:growth,totalGrowth:totalGrowth,quality:quality};
 }
 function crhText_(value,style){if(value===null||value===undefined||!Number.isFinite(value))return '표본 없음';if(style==='percent')return (value*100).toFixed(1)+'%';if(style==='ratio')return value.toFixed(2)+'×';return value.toLocaleString('en-US',{maximumFractionDigits:style==='integer'?0:style==='days'?2:1});}
 function crhFixedCohort_(records,c){
@@ -137,11 +137,12 @@ function crhSeptemberWindow_(records,setting){
   }
   return {start:september[0]||null,method:'연속 기록 기준 미충족·첫 유효 기록부터 참고',activeDays:september.length};
 }
-function crhRequestCosts_(parsed,stats,summary){
+function crhRequestCosts_(parsed,stats,summary,c,examples){
   const result={};Object.keys(stats).forEach(month=>{
     const sizes=Array.from(stats[month].worked,id=>parsed.requests[id]).filter(r=>r&&laNumber_(r.total)&&r.total>0).map(r=>r.total),average=sizes.length?sizes.reduce((a,b)=>a+b,0)/sizes.length:null,s=summary[month];
     const listing=average!==null&&s.listingRate>0?average/s.listingRate:null,total=average!==null&&s.totalRate>0?average/s.totalRate:null;
-    result[month]={averageVi:average,sizeSample:sizes.length,workedRequests:stats[month].worked.size,listingPerRequest:listing,totalPerRequest:total,five:total!==null?total*5:null,ten:total!==null?total*10:null};
+    const baseline=examples[month],manualD=baseline.totalND,manualRate=baseline.totalNRate;
+    result[month]={withoutCrawlRate:manualRate,withoutCrawlD:manualD,withoutCrawlRequests:baseline.totalNRequests,withoutCrawlPerRequest:average!==null&&manualRate>0?average/manualRate:null,averageVi:average,sizeSample:sizes.length,workedRequests:stats[month].worked.size,listingPerRequest:listing,totalPerRequest:total,five:total!==null?total*5:null,ten:total!==null?total*10:null};
   });
   const common=result['2026-11'].averageVi;Object.keys(result).forEach(month=>{const s=summary[month];result[month].sameSizePerRequest=common!==null&&s.totalRate>0?common/s.totalRate:null;});return result;
 }
@@ -150,30 +151,30 @@ function crhExamples_(records,requests,c){
   records.forEach(s=>{display.set(s.name,s.worker);const key=JSON.stringify([s.day.slice(0,7),s.name]);if(!all.has(key))all.set(key,crhBucket_());crhAdd_(all.get(key),s);if(!rawModes.has(key))rawModes.set(key,new Set());const k=mode(s,requests[s.id]);if(k)rawModes.get(key).add(k);});
   pure.groups.forEach((bucket,key)=>{const [month,name,k]=JSON.parse(key),group=JSON.stringify([month,name]);if(!groups.has(group))groups.set(group,{});groups.get(group)[k]=bucket;});
   const mean=a=>a.length?a.reduce((n,v)=>n+v,0)/a.length:null;
-  ['2026-09','2026-10','2026-11'].forEach(month=>result[month]={eligible:0,improved:0,workerCount:0,oneMode:0,mixedExcluded:0,rows:[],rates:[],ratios:[],candidates:[],allWorkers:[]});
+  ['2026-09','2026-10','2026-11'].forEach(month=>result[month]={eligible:0,improved:0,totalCVi:0,totalNVi:0,totalCD:0,totalND:0,nRequestIds:new Set(),workerCount:0,oneMode:0,mixedExcluded:0,rows:[],rates:[],ratios:[],candidates:[],allWorkers:[]});
   all.forEach((g,key)=>{const [month,name]=JSON.parse(key),rate=crhRate_(g.vi,crhDays_(g.days,c)),out=result[month];out.workerCount++;if(rate!==null){out.rates.push(rate);out.allWorkers.push({worker:display.get(name),name,rate,d:crhDays_(g.days,c)});}const kinds=rawModes.get(key),pair=groups.get(key);if(kinds.size<2)out.oneMode++;else if(!pair||!pair.crawl||!pair.manual)out.mixedExcluded++;});
   groups.forEach((g,key)=>{
-    if(!g.crawl||!g.manual)return;const [month,name]=JSON.parse(key),manualD=crhDays_(g.manual.days,c),crawlD=crhDays_(g.crawl.days,c),manualRate=crhRate_(g.manual.vi,manualD),crawlRate=crhRate_(g.crawl.vi,crawlD),ratio=crhRatio_(crawlRate,manualRate);if(ratio===null)return;
-    const out=result[month];out.eligible++;out.ratios.push(ratio);
+    if(!g.crawl||!g.manual||g.crawl.days.size<2||g.manual.days.size<2)return;const [month,name]=JSON.parse(key),manualD=crhDays_(g.manual.days,c),crawlD=crhDays_(g.crawl.days,c),manualRate=crhRate_(g.manual.vi,manualD),crawlRate=crhRate_(g.crawl.vi,crawlD),ratio=crhRatio_(crawlRate,manualRate);if(ratio===null)return;
+    const out=result[month];out.eligible++;out.ratios.push(ratio);out.totalCVi+=g.crawl.vi;out.totalNVi+=g.manual.vi;out.totalCD+=crawlD;out.totalND+=manualD;g.manual.requests.forEach(id=>out.nRequestIds.add(id));
     if(ratio>1){out.improved++;out.candidates.push({worker:display.get(name),name,kind:'C/N',manualRate,crawlRate,ratio,manualD,crawlD,manualVi:g.manual.vi,crawlVi:g.crawl.vi});}
   });
   Object.keys(result).forEach(month=>{
-    const out=result[month];out.candidates.sort((a,b)=>b.ratio-a.ratio||b.crawlVi-a.crawlVi||a.worker.localeCompare(b.worker));out.rows=out.candidates.slice(0,5);const selected=new Set(out.rows.map(r=>r.name));
-    const previous=month==='2026-11'?'2026-10':month==='2026-10'?'2026-09':null,changes=[];
-    out.allWorkers.forEach(g=>{if(selected.has(g.name)||!previous)return;const prior=all.get(JSON.stringify([previous,g.name]));if(!prior)return;const before=crhRate_(prior.vi,crhDays_(prior.days,c)),ratio=crhRatio_(g.rate,before);if(ratio!==null&&ratio>1)changes.push({worker:g.worker,name:g.name,kind:'전월비',manualRate:before,crawlRate:g.rate,ratio,manualD:crhDays_(prior.days,c),crawlD:g.d});});
-    changes.sort((a,b)=>b.ratio-a.ratio||a.worker.localeCompare(b.worker));for(const g of changes){if(out.rows.length>=5)break;out.rows.push(g);selected.add(g.name);}
-    for(const g of out.allWorkers.slice().sort((a,b)=>b.rate-a.rate||a.worker.localeCompare(b.worker))){if(out.rows.length>=5)break;if(selected.has(g.name))continue;out.rows.push({worker:g.worker,name:g.name,kind:'월 생산성 참고',manualRate:null,crawlRate:g.rate,ratio:null,manualD:null,crawlD:g.d});selected.add(g.name);}
-    out.medianRate=crhMedian_(out.rates);out.meanRate=mean(out.rates);out.medianRatio=crhMedian_(out.ratios);out.meanRatio=mean(out.ratios);delete out.candidates;delete out.allWorkers;
+    const out=result[month];out.candidates.sort((a,b)=>b.ratio-a.ratio||b.crawlVi-a.crawlVi||a.worker.localeCompare(b.worker));out.rows=out.candidates.slice(0,5);
+    out.totalNRequests=out.nRequestIds.size;delete out.nRequestIds;out.totalCRate=crhRate_(out.totalCVi,out.totalCD);out.totalNRate=crhRate_(out.totalNVi,out.totalND);out.totalRatio=crhRatio_(out.totalCRate,out.totalNRate);out.medianRate=crhMedian_(out.rates);out.meanRate=mean(out.rates);out.medianRatio=crhMedian_(out.ratios);out.meanRatio=mean(out.ratios);delete out.candidates;delete out.allWorkers;
   });return result;
 }
 function crhNovember_(parsed,c,o){
-  const count=Number(o.asOf.slice(8,10)),daily=new Map();
-  for(let d=1;d<=count;d++)daily.set('2026-11-'+String(d).padStart(2,'0'),{vi:0,crawlVi:0,unknownVi:0,days:new Set(),workers:new Set(),requests:new Set(),crawlRequests:new Set()});
-  parsed.records.filter(s=>daily.has(s.day)).forEach(s=>{const g=daily.get(s.day),r=parsed.requests[s.id];g.vi+=s.vi;g.days.add(JSON.stringify([s.name,s.day]));g.workers.add(s.name);g.requests.add(s.id);if(r&&r.stage==='CRAWL_COMPLETED'){g.crawlVi+=s.vi;g.crawlRequests.add(s.id);}else if(!r||r.stage!=='N/A')g.unknownVi+=s.vi;});
-  function pool(groups){const vi=groups.reduce((n,g)=>n+g.vi,0),crawl=groups.reduce((n,g)=>n+g.crawlVi,0),d=groups.reduce((n,g)=>n+crhDays_(g.days,c),0);return {vi,d,share:vi>0&&crawl>=0&&crawl<=vi?crawl/vi:null,rate:crhRate_(vi,d),activeDays:groups.filter(g=>g.days.size).length};}
-  const keys=Array.from(daily.keys()),rows=keys.map((date,i)=>{const g=daily.get(date),rolling=pool(keys.slice(Math.max(0,i-6),i+1).map(d=>daily.get(d)));return [date,g.vi>0&&g.crawlVi>=0&&g.crawlVi<=g.vi?g.crawlVi/g.vi:null,g.vi,crhRate_(g.vi,crhDays_(g.days,c)),rolling.rate,g.workers.size,g.requests.size?g.crawlRequests.size/g.requests.size:null,g.requests.size,g.crawlRequests.size];});
-  const split=Math.floor(count/2),first=pool(keys.slice(0,split).map(d=>daily.get(d))),second=pool(keys.slice(split).map(d=>daily.get(d))),low=pool(Array.from(daily.values()).filter(g=>g.vi>0&&g.crawlVi/g.vi<0.5)),high=pool(Array.from(daily.values()).filter(g=>g.vi>0&&g.crawlVi/g.vi>=0.5));
-  return {rows,split,first,second,low,high,halfRatio:crhRatio_(second.rate,first.rate),shareRatio:crhRatio_(high.rate,low.rate)};
+  const weeks=[],asOf=o.asOf,first='2026-11-02';
+  function build(number,start,end,observedStart){
+    const through=asOf<end?asOf:end,requests=new Set(),crawlRequests=new Set(),days=new Set(),workers=new Set(),workDates=new Set();let vi=0,crawlVi=0;
+    parsed.records.filter(s=>s.day.slice(0,7)==='2026-11'&&s.day>=observedStart&&s.day<=through).forEach(s=>{vi+=s.vi;requests.add(s.id);days.add(JSON.stringify([s.name,s.day]));workers.add(s.name);workDates.add(s.day);const req=parsed.requests[s.id];if(req&&req.stage==='CRAWL_COMPLETED'){crawlRequests.add(s.id);crawlVi+=s.vi;}});
+    const d=crhDays_(days,c);return {number,start,end,through,partial:through<end,vi,d,rate:crhRate_(vi,d),requests:requests.size,crawlRequests:crawlRequests.size,requestShare:requests.size?crawlRequests.size/requests.size:null,viShare:vi>0&&crawlVi>=0&&crawlVi<=vi?crawlVi/vi:null,workers:workers.size,workDays:workDates.size};
+  }
+  const rollover=build(0,'2026-10-26','2026-11-01','2026-11-01');if(rollover.requests>0)weeks.push(rollover);
+  for(let day=first,number=1;day<=asOf;number++,day=new Date(Date.parse(day+'T00:00:00Z')+7*86400000).toISOString().slice(0,10)){
+    const end=new Date(Date.parse(day+'T00:00:00Z')+6*86400000).toISOString().slice(0,10);weeks.push(build(number,day,end,day));
+  }
+  const current=weeks.filter(w=>w.number>0),a=current[0]||null,b=current[current.length-1]||null;return {weeks,first:a,last:b,growth:a&&b?crhRatio_(b.rate,a.rate):null,shareChange:a&&b&&a.requestShare!==null&&b.requestShare!==null?b.requestShare-a.requestShare:null};
 }
 function crhRender_(ss,r){
   const name='11월 보고';let sheet=ss.getSheetByName(name);
@@ -192,49 +193,47 @@ function crhRender_(ss,r){
   function monthRow(row,label,fn,style,bold){text(row,1,6,label);months.forEach((m,j)=>text(row,7+j*2,2,value(fn(m),style),j===2?'#e2f0e9':row%2?'#ffffff':'#eaf0f5').setHorizontalAlignment('right').setFontWeight(bold?'bold':'normal'));}
   text(1,1,12,'11월 보고 | CRAWLER HUB','#15364a','#ffffff',22).setFontWeight('bold');sheet.setRowHeight(1,38);
   text(2,1,12,sep+' · 10월 전체 · 11월 기준일 '+r.asOf+' | 내부 3P | d=CONFIG 근무비율 보정 근무일',null,'#607087',9);
-  const cards=[['11월 리스팅 VI',f(nov.vi,'integer'),'완료 물량'],['10월 대비 VI/d',f(r.growth,'ratio'),change(r.growth)],['11월 크롤링 사용 시',f(r.examples['2026-11'].medianRatio,'ratio'),r.examples['2026-11'].eligible+'명 비교'],['같은 참여 집단의 변화',f(r.cohort.change,'ratio'),change(r.cohort.change)+' · '+r.cohort.count+'명']];
+  const cards=[['11월 리스팅 VI',f(nov.vi,'integer'),'완료 물량'],['10월 대비 VI/d',f(r.growth,'ratio'),change(r.growth)],['11월 전체 C/N',f(r.examples['2026-11'].totalRatio,'ratio'),r.examples['2026-11'].eligible+'명 비교'],['같은 참여 집단의 변화',f(r.cohort.change,'ratio'),change(r.cohort.change)+' · '+r.cohort.count+'명']];
   cards.forEach((card,i)=>{const col=1+i*3;text(4,col,3,card[0],'#dce9ed','#33586a',9);text(5,col,3,card[1],'#ffffff','#15364a',24).setFontWeight('bold');text(6,col,3,card[2],'#ffffff','#38726c',9);});sheet.setRowHeight(5,37);
   section(8,'01  월별 물량·생산성·투입 d');monthHeader(9,'지표');
-  const matrix=[['리스팅 VI',m=>r.summary[m].vi,'integer'],['리스팅 VI/d',m=>r.summary[m].listingRate,''],['크롤링 VI',m=>r.summary[m].prepared,'integer'],['크롤링 비중 (리스팅 VI 기준)',m=>r.summary[m].share,'percent'],['크롤링 사용 시 생산성 배수(중앙)',m=>r.examples[m].medianRatio,'ratio'],['작업한 요청 수',m=>r.summary[m].requests,'integer'],['준비+리스팅 총 d',m=>r.summary[m].totalD,'days'],['크롤링 VI/d',m=>r.summary[m].crawlRate,''],['크롤링 비중 (작업 요청 건수)',m=>r.summary[m].requestShare,'percent']];
-  matrix.forEach((row,i)=>monthRow(10+i,row[0],row[1],row[2],[1,4,6].includes(i)));
-  section(19,'02  작업자 사례 TOP 5 — C/N 우선, 부족 시 전월비·월 생산성 참고');
+  const matrix=[['리스팅 VI',m=>r.summary[m].vi,'integer'],['리스팅 VI/d',m=>r.summary[m].listingRate,''],['크롤링+리스팅 통합 VI/d',m=>r.summary[m].totalRate,''],['크롤링 VI',m=>r.summary[m].prepared,'integer'],['크롤링 비중 (리스팅 VI 기준)',m=>r.summary[m].share,'percent'],['전체 비교대상 C/N 배수',m=>r.examples[m].totalRatio,'ratio'],['작업한 요청 수',m=>r.summary[m].requests,'integer'],['크롤링+리스팅 총 d',m=>r.summary[m].totalD,'days'],['크롤링 VI/d',m=>r.summary[m].crawlRate,''],['크롤링 비중 (작업 요청 건수)',m=>r.summary[m].requestShare,'percent']];
+  matrix.forEach((row,i)=>monthRow(10+i,row[0],row[1],row[2],[1,2,5,7].includes(i)));
+  section(20,'02  작업자 C/N 효과 TOP 5 — 양쪽 방식 각각 2기록일 이상');
   months.forEach((m,i)=>{
-    const col=1+i*4,g=r.examples[m];text(20,col,4,labels[i]+' · 월 전체 '+g.workerCount+'명 / C/N '+g.eligible+'명','#dce9ed',null,9).setFontWeight('bold');
-    ['작업자·기준','기준 VI/d','현재 VI/d','배수'].forEach((v,j)=>text(21,col+j,1,v,'#e7edf3',null,8));
-    for(let k=0;k<5;k++){const row=22+k,item=g.rows[k];sheet.setRowHeight(row,34);if(!item){text(row,col,4,g.workerCount<5?'월 작업자 '+g.workerCount+'명':'비교 가능한 사례 없음','#ffffff','#9aa7b6',8);continue;}
+    const col=1+i*4,g=r.examples[m];text(21,col,4,labels[i]+' · 월 전체 '+g.workerCount+'명 / C/N '+g.eligible+'명','#dce9ed',null,9).setFontWeight('bold');
+    ['작업자','N VI/d','C VI/d','배수'].forEach((v,j)=>text(22,col+j,1,v,'#e7edf3',null,8));
+    for(let k=0;k<5;k++){const row=23+k,item=g.rows[k];sheet.setRowHeight(row,34);if(!item){text(row,col,4,'2일 기준 개선 사례 '+g.rows.length+'명','#ffffff','#9aa7b6',8);continue;}
       text(row,col,1,item.worker+'\n'+item.kind,'#ffffff',null,8);text(row,col+1,1,item.manualRate===null?'—':f(item.manualRate),'#ffffff',null,8);text(row,col+2,1,f(item.crawlRate),'#ffffff',null,8);text(row,col+3,1,item.ratio===null?'참고':f(item.ratio,'ratio'),item.kind==='월 생산성 참고'?'#e7edf3':'#d7eddf','#1d6448',11).setFontWeight('bold');
     }
-    text(27,col,4,'작업자 생산성(중앙): '+f(g.medianRate)+' VI/d · '+g.workerCount+'명','#dce9ed',null,9);
-    text(28,col,4,'크롤링 사용 시(중앙): '+f(g.medianRatio,'ratio')+' · '+g.eligible+'명 비교','#dce9ed',null,9);
-    text(29,col,4,'한 방식만 '+g.oneMode+'명 · 혼합일 제외 '+g.mixedExcluded+'명',null,'#607087',8);
-  });sheet.setRowHeight(27,30);sheet.setRowHeight(28,30);sheet.setRowHeight(29,29);
-  text(30,1,12,'작업자 생산성=전체 작업자 VI/d의 중앙값. 크롤링 사용 시=같은 작업자의 비크롤링 대비 크롤링 VI/d 배수 중앙값. TOP 5만 계산한 값이 아님. C/N은 하루 기록도 포함.',null,'#607087',8);sheet.setRowHeight(30,27);
+    text(28,col,4,'전체 C VI/d: '+f(g.totalCRate)+' · '+g.eligible+'명','#dce9ed',null,9);
+    text(29,col,4,'전체 N VI/d: '+f(g.totalNRate)+' · '+g.eligible+'명','#dce9ed',null,9);
+
+  });sheet.setRowHeight(28,30);sheet.setRowHeight(29,30);sheet.setRowHeight(30,29);
+  text(31,1,12,'N=비크롤링, C=크롤링. 배수=C VI/d÷N VI/d. 양쪽 각각 2기록일 이상만 비교. 전체 C/N 값은 TOP 5가 아닌 기준 통과 전체 대상자의 각각 VI 합계÷각각 d 합계. 부족한 순위는 다른 기준으로 채우지 않음.',null,'#607087',8);sheet.setRowHeight(31,27);
   section(32,'03  요청 몇 개에 몇 d가 필요한가? — 평균 요청 크기 기준 계획값');monthHeader(33,'작업한 요청의 현재 크기로 환산');
   monthRow(34,'요청 1개 평균 VI (표본 요청 수)',m=>f(r.requestCosts[m].averageVi)+' VI · n='+r.requestCosts[m].sizeSample+'/'+r.requestCosts[m].workedRequests,'');
-  monthRow(35,'리스팅만 · 요청 1개 필요 d',m=>r.requestCosts[m].listingPerRequest,'days');
-  monthRow(36,'준비+리스팅 · 요청 1개 필요 d',m=>r.requestCosts[m].totalPerRequest,'days',true);
-  monthRow(37,'준비+리스팅 · 요청 5개 필요 d',m=>r.requestCosts[m].five,'days',true);
-  monthRow(38,'준비+리스팅 · 요청 10개 필요 d',m=>r.requestCosts[m].ten,'days');
+  monthRow(35,'크롤링 없이 리스팅 · 요청 1개 필요 d',m=>r.requestCosts[m].withoutCrawlPerRequest===null?'비크롤링 비교 기록 없음':r.requestCosts[m].withoutCrawlPerRequest,'days');
+  monthRow(36,'크롤링+리스팅 · 요청 1개 필요 d',m=>r.requestCosts[m].totalPerRequest,'days',true);
+  monthRow(37,'크롤링+리스팅 · 요청 5개 필요 d',m=>r.requestCosts[m].five,'days',true);
+  monthRow(38,'크롤링+리스팅 · 요청 10개 필요 d',m=>r.requestCosts[m].ten,'days');
   monthRow(39,'동일 크기 비교 · 11월 평균 VI의 요청 1개',m=>r.requestCosts[m].sameSizePerRequest,'days');
-  text(40,1,12,'필요 d=평균 요청 VI÷해당 월 VI/d. 크롤링 세션 없는 완료 요청은 Started At에 요청당 1일×CONFIG 비율을 추정 추가(동일 날짜 여러 요청도 각각 추정). 인원 배분·대기시간은 별도.',null,'#607087',8);sheet.setRowHeight(40,30);
-  section(42,'04  11월 일별 심층 — 크롤링 비중과 리스팅 효과');
-  const daily=r.november.rows,left=Math.ceil(daily.length/2),headers=['일자','크롤링 VI%','크롤링 요청%','완료 VI','VI/d','7일 VI/d'];
-  [1,7].forEach(col=>headers.forEach((label,i)=>text(43,col+i,1,label,'#dce9ed',null,8)));
-  for(let i=0;i<left;i++)for(let side=0;side<2;side++){
-    const item=daily[i+side*left];if(!item)continue;const df=(v,style)=>v===null?'—':f(v,style),values=[item[0].slice(5),df(item[1],'percent'),df(item[6],'percent'),f(item[2],'integer'),df(item[3]),df(item[4])];
-    values.forEach((v,j)=>text(44+i,1+side*6+j,1,v,i%2?'#ffffff':'#eaf0f5',null,8));
-  }
-  const end=45+left,n=r.november;
-  text(end,1,6,'1~'+n.split+'일: C '+f(n.first.share,'percent')+' / '+f(n.first.rate)+' VI/d','#dce9ed');text(end,7,6,(n.split+1)+'~'+r.asOf.slice(8,10)+'일: C '+f(n.second.share,'percent')+' / '+f(n.second.rate)+' VI/d','#dce9ed');
-  text(end+1,1,12,'후반/전반 VI/d '+f(n.halfRatio,'ratio')+' | C VI비중 50% 미만 '+f(n.low.rate)+' VI/d ('+n.low.activeDays+'일) → 50% 이상 '+f(n.high.rate)+' VI/d ('+n.high.activeDays+'일), '+f(n.shareRatio,'ratio'),null,'#15364a',10).setFontWeight('bold');sheet.setRowHeight(end+1,28);
-  text(end+2,1,12,'11월 후반 변화: 크롤링 VI비중 '+(n.first.share!==null&&n.second.share!==null?((n.second.share-n.first.share)*100).toFixed(1)+'%p':'—')+' / 리스팅 VI/d '+change(n.halfRatio),null,'#15364a',11).setFontWeight('bold');sheet.setRowHeight(end+2,26);
+  text(40,1,12,'크롤링 없는 d=평균 요청 VI÷2번 전체 N VI/d. 현 방식 d=평균 요청 VI÷해당 월 통합 VI/d. 크롤링 세션 없는 완료 요청은 Started At에 요청당 1일×CONFIG 비율을 추정 추가(동일 날짜 여러 요청도 각각 추정). 인원 배분·대기시간은 별도.',null,'#607087',8);sheet.setRowHeight(40,30);
+  section(42,'04  11월 주차별 — 리스팅 요청의 크롤링 비중·완료 VI·VI/d');
+  const headers=[['주차 · 월요일~일요일',1,4],['전체 요청',5,1],['크롤링 요청',6,1],['요청 비중',7,1],['완료 VI',8,2],['d',10,1],['VI/d',11,2]];
+  headers.forEach(([label,col,width])=>text(43,col,width,label,'#dce9ed',null,8));
+  const weeks=r.november.weeks,df=(v,style)=>v===null?'—':f(v,style);
+  weeks.forEach((w,i)=>{const row=44+i,label=w.number===0?'전월 연결주 (11/1만)':('W'+w.number+' · '+w.start.slice(5).replace('-','/')+'~'+w.end.slice(5).replace('-','/')+(w.partial?' ('+w.through.slice(5).replace('-','/')+'까지)':''));
+    text(row,1,4,label,i%2?'#ffffff':'#eaf0f5',null,9);[[w.requests,5,1,'integer'],[w.crawlRequests,6,1,'integer'],[w.requestShare,7,1,'percent'],[w.vi,8,2,'integer'],[w.d,10,1,'days'],[w.rate,11,2,'']].forEach(([v,col,width,style])=>text(row,col,width,df(v,style),i%2?'#ffffff':'#eaf0f5'));sheet.setRowHeight(row,26);
+  });
+  const end=45+weeks.length,n=r.november;
+  text(end,1,12,n.first&&n.last?'W1→W'+n.last.number+': 요청 크롤링 비중 '+(n.shareChange===null?'—':(n.shareChange*100).toFixed(1)+'%p')+' / VI/d '+df(n.growth,'ratio'):'11월 W1은 11/2부터 집계',null,'#15364a',11).setFontWeight('bold');sheet.setRowHeight(end,26);
   const notes=[
-    '9월 '+(r.september.start||'없음')+'부터 ('+r.september.method+'). C/N은 같은 날 혼합일 제외. 작업자 생산성은 전체 개인 VI/d의 중앙값, 크롤링 효과는 비교 가능한 개인 C/N 배수의 중앙값.',
+    '9월 '+(r.september.start||'없음')+'부터 ('+r.september.method+'). C/N은 같은 날 혼합일 제외. 전체 C/N은 양쪽 2일 기준 통과 인원 전체의 각각 VI 합계÷각각 d 합계. 개인별 평균·중앙값이 아님.',
     '요청 크기는 해당 월 작업한 고유 요청의 현재 Total VI 평균. 필요 d는 합산 생산성에 이 크기를 적용한 모형값으로 실제 요청별 소요기간의 평균은 아님. 요청 크기 차이는 동일 크기 행으로 비교.',
     '크롤링 세션이 없으면 요청당 1일×현재 작업자 근무비율을 적용. 세션에서 계산한 값과 합쳐 총 d 하나로 표시. 작업시간이 아닌 근무일 기준 계획값.',
-    '11월 일별 7일 VI/d는 최근 7개 달력일 합산 VI÷합산 d. 전반/후반 및 C비중 구간 비교는 관측 동행성으로, 작업자·난이도·배정 차이를 제거한 인과 효과가 아님.',
-    '요청%=그날 3P 작업기록이 있는 고유 요청 중 크롤링 요청의 건수 비중. VI%=그날 완료 VI 중 크롤링 요청의 VI 비중. 기록 없는 날짜는 —. 두 비중은 다를 수 있음.',
+    'W1=11/2~11/8, 이후 월~일 단위. 진행 중 주는 기준일까지. 주간 VI/d=주간 합산 VI÷주간 합산 d. 같은 요청은 여러 날짜·작업자에 걸쳐도 주 내 1건. 주가 바뀌면 다시 셈.',
+    '주간 요청 비중=그 주 3P 작업기록이 있는 고유 요청 중 크롤링 요청 수÷전체 요청 수. 11/1 기록은 전월 연결주로 따로 표시. 월별 VI 비중과 주간 요청 건수 비중은 다를 수 있음.',
     '월별 자료 점검: '+months.map(m=>m.slice(5)+'월 속성 확인 '+r.summary[m].unknownRequests+'건, VI 누락 '+r.summary[m].invalidVi+'행, 크롤링 연결 확인 '+r.summary[m].uncoveredCrawls+'건').join(' / ')+'. 월 전체 차단 없이 집계 가능한 기록 기준으로 계산.',
-    '점검: VI 누락 '+r.quality.invalidListing+'행, 월 미귀속 준비 VI '+f(r.quality.unknownPreparedVi,'integer')+', 비율 미설정 '+r.quality.missingRatio.length+'명(기본 1). 개인 크롤링 제공자 비교 없음. 별도 실행 시만 갱신.'
+    '점검: VI 누락 '+r.quality.invalidListing+'행, 월 미귀속 크롤링 VI '+f(r.quality.unknownPreparedVi,'integer')+', 비율 미설정 '+r.quality.missingRatio.length+'명(기본 1). 개인 크롤링 제공자 비교 없음. 별도 실행 시만 갱신.'
   ];notes.forEach((note,i)=>{text(end+3+i,1,12,note,null,'#607087',8);sheet.setRowHeight(end+3+i,26);});sheet.getRange(1,1,height,12).setValues(grid);merges.forEach(args=>sheet.getRange(...args).merge());ss.setActiveSheet(sheet);
 }
